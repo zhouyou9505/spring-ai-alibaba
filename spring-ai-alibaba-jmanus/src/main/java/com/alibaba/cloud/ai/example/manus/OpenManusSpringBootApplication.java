@@ -18,8 +18,18 @@ package com.alibaba.cloud.ai.example.manus;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.data.mongodb.config.EnableMongoAuditing;
+import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication
+@EnableMongoAuditing
+@EnableAsync
+@ComponentScan(basePackages = {"com.alibaba.cloud.ai.example.manus","com.alibaba.cloud.ai.example.manus2"})
+@EntityScan(basePackages = {"com.alibaba.cloud.ai.example.manus","com.alibaba.cloud.ai.example.manus2"})
+@EnableMongoRepositories(basePackages = {"com.alibaba.cloud.ai.example.manus2"})
 public class OpenManusSpringBootApplication {
 
 	public static void main(String[] args) {

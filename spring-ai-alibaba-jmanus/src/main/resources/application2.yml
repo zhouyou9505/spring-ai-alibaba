@@ -1,10 +1,10 @@
 server:
-  port: 18080
+  port: 3001
+  address: 0.0.0.0
+
 spring:
   application:
-    name: spring-ai-alibaba-openmanus
-  main:
-    allow-bean-definition-overriding: true
+    name: rowboat-agents
   data:
     mongodb:
       uri: ${MONGODB_URI:mongodb://localhost:27017/rowboat}
@@ -15,55 +15,41 @@ spring:
       database: 1
   ai:
     openai:
+      api-key: sk-9930385949b643e19194481410d2eeef
       base-url: https://dashscope.aliyuncs.com/compatible-mode
-      api-key:  sk-9930385949b643e19194481410d2eeef
       chat:
         options:
-          model: qwen-plus-latest
-    alibaba:
-      toolcalling:
-        tavilysearch:
-          enabled: true
-          api-key: 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
-    mcp:
+          model: qwen-max-latest
       client:
-        enabled: false
-  # H2 数据库配置
-  datasource:
-    url: jdbc:h2:file:./h2-data/openmanus_db;MODE=MYSQL;DATABASE_TO_LOWER=TRUE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: $FSD#@!@#!#$!12341234
-  # JPA 配置
-  jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-  # H2 控制台配置
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-logging:
-  file:
-    name: ./logs/info.log
-  level:
-    root: INFO
+        connection-timeout: 60000
+        read-timeout: 300000
+        write-timeout: 60000
 
+logging:
+  level:
+    com.rowboat.agents: INFO
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
 
 # API Configuration
 api:
   key: ${API_KEY:}
 
 # OpenAI Configuration
-#openai:
-#  api:
-#    key: ${OPENAI_API_KEY:}
-#    timeout: 60s
+openai:
+  api:
+    key: ${OPENAI_API_KEY:}
+    timeout: 60s
 
 # Application Configuration
 app:
@@ -83,4 +69,4 @@ agent:
   temperature: ${AGENT_TEMPERATURE:0.7}
   rag-enabled: ${AGENT_RAG_ENABLED:true}
   rag-top-k: ${AGENT_RAG_TOP_K:5}
-  rag-similarity-threshold: ${AGENT_RAG_SIMILARITY_THRESHOLD:0.7}
+  rag-similarity-threshold: ${AGENT_RAG_SIMILARITY_THRESHOLD:0.7} 

@@ -190,6 +190,14 @@ public class ReactAgent {
 		return "end";
 	}
 
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
 	List<String> getTools() {
 		return tools;
 	}
