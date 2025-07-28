@@ -1,0 +1,462 @@
+{
+  "workflowId": "blog-writing-workflow-001",
+  "name": "多Agent合作撰写技术博客工作流",
+  "description": "通过多个专业Agent协作完成技术博客的选题、搜索、写作、校对和发布",
+  "version": "1.0.0",
+  "agents": [
+    {
+      "agentId": "user_input",
+      "name": "用户输入",
+      "type": "input",
+      "description": "用户输入博客主题",
+      "instructions": "接收用户输入的博客主题",
+      "model": null,
+      "config": {
+        "inputKey": "topic",
+        "outputKey": "user_topic"
+      },
+      "inputMapping": {
+        "topic": "topic"
+      },
+      "outputMapping": {
+        "topic": "user_topic"
+      },
+      "options": {
+        "toggleAble": false,
+        "controlType": "manual",
+        "order": 1
+      }
+    },
+    {
+      "agentId": "topic_validation_agent",
+      "name": "选题Agent",
+      "type": "llm",
+      "description": "验证主题热度和可行性",
+      "instructions": "你是一个专业的选题专家，负责验证博客主题的热度、可行性和受众兴趣。请分析给定的主题，评估其搜索热度、竞争程度和用户兴趣度。",
+      "model": "qwen-turbo",
+      "config": {
+        "systemPrompt": "你是一个专业的选题专家，擅长分析技术博客主题的热度和可行性。",
+        "userPrompt": "请分析以下技术博客主题的热度和可行性：{topic}\n\n请从以下维度进行评估：\n1. 搜索热度（1-10分）\n2. 竞争程度（1-10分）\n3. 用户兴趣度（1-10分）\n4. 技术深度要求\n5. 是否建议继续\n\n请以JSON格式返回结果。",
+        "outputKey": "topic_validation_result"
+      },
+      "inputMapping": {
+        "topic": "user_topic"
+      },
+      "outputMapping": {
+        "validation_result": "topic_validation_result"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "order": 2,
+        "maxRetries": 2
+      }
+    },
+    {
+      "agentId": "topic_decision",
+      "name": "选题决策",
+      "type": "condition",
+      "description": "判断选题是否通过",
+      "instructions": "根据选题Agent的评估结果，判断是否继续执行后续流程",
+      "model": null,
+      "config": {
+        "condition": "topic_validation_result.suggested == true && topic_validation_result.heat_score >= 6",
+        "trueNext": "search_agent",
+        "falseNext": "user_input"
+      },
+      "inputMapping": {
+        "validation_result": "topic_validation_result"
+      },
+      "outputMapping": {
+        "decision": "topic_approved",
+        "next_agent": "next_step"
+      },
+      "options": {
+        "toggleAble": false,
+        "controlType": "auto",
+        "order": 3
+      }
+    },
+    {
+      "agentId": "search_agent",
+      "name": "搜索Agent",
+      "type": "llm",
+      "description": "收集相关资料和信息",
+      "instructions": "你是一个专业的研究员，负责收集与主题相关的资料、数据、案例和最新信息。请使用多种搜索策略，确保信息的全面性和准确性。",
+      "model": "qwen-turbo",
+      "config": {
+        "systemPrompt": "你是一个专业的研究员，擅长收集和整理技术资料。",
+        "userPrompt": "请为以下技术博客主题收集相关资料：{topic}\n\n请收集以下类型的信息：\n1. 技术文档和API说明\n2. 相关案例和最佳实践\n3. 最新发展趋势\n4. 常见问题和解决方案\n5. 相关工具和资源\n\n请以结构化的方式返回收集到的资料。",
+        "outputKey": "search_results"
+      },
+      "inputMapping": {
+        "topic": "user_topic"
+      },
+      "outputMapping": {
+        "search_data": "search_results"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "order": 4,
+        "maxRetries": 3
+      }
+    },
+    {
+      "agentId": "data_processing_agent",
+      "name": "资料Agent",
+      "type": "llm",
+      "description": "去重和摘要处理",
+      "instructions": "你是一个资料处理专家，负责对收集到的资料进行去重、分类、摘要和结构化处理。",
+      "model": "qwen-turbo",
+      "config": {
+        "systemPrompt": "你是一个资料处理专家，擅长整理和结构化技术资料。",
+        "userPrompt": "请对以下收集到的资料进行处理：{search_data}\n\n请进行以下处理：\n1. 去重和合并相似信息\n2. 按主题分类整理\n3. 生成关键信息摘要\n4. 识别重要数据和案例\n5. 整理成结构化格式\n\n请返回处理后的结构化资料。",
+        "outputKey": "processed_data"
+      },
+      "inputMapping": {
+        "search_data": "search_results"
+      },
+      "outputMapping": {
+        "processed_data": "processed_data"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "order": 5
+      }
+    },
+    {
+      "agentId": "outline_agent",
+      "name": "大纲Agent",
+      "type": "llm",
+      "description": "生成章节大纲",
+      "instructions": "你是一个专业的写作规划师，负责根据主题和资料生成详细的博客章节大纲。",
+      "model": "qwen-turbo",
+      "config": {
+        "systemPrompt": "你是一个专业的写作规划师，擅长制定技术博客的大纲结构。",
+        "userPrompt": "请为以下技术博客主题生成详细的章节大纲：\n主题：{topic}\n资料：{processed_data}\n\n请生成包含以下要素的大纲：\n1. 引言和背景介绍\n2. 主要章节和子章节\n3. 每个章节的关键要点\n4. 技术深度和难度安排\n5. 预计阅读时间\n\n请以Markdown格式返回大纲。",
+        "outputKey": "blog_outline"
+      },
+      "inputMapping": {
+        "topic": "user_topic",
+        "processed_data": "processed_data"
+      },
+      "outputMapping": {
+        "outline": "blog_outline"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "order": 6
+      }
+    },
+    {
+      "agentId": "writing_agent",
+      "name": "写作Agent",
+      "type": "llm",
+      "description": "分段撰写博客内容",
+      "instructions": "你是一个专业的技术写手，负责根据大纲和资料撰写高质量的博客内容。",
+      "model": "qwen-turbo",
+      "config": {
+        "systemPrompt": "你是一个专业的技术写手，擅长撰写清晰、准确、有深度的技术博客。",
+        "userPrompt": "请根据以下大纲和资料撰写博客内容：\n主题：{topic}\n大纲：{outline}\n资料：{processed_data}\n\n请按照大纲结构撰写，要求：\n1. 语言清晰易懂\n2. 技术准确无误\n3. 包含实际案例\n4. 提供代码示例\n5. 结构层次分明\n\n请以Markdown格式返回完整的博客内容。",
+        "outputKey": "blog_content"
+      },
+      "inputMapping": {
+        "topic": "user_topic",
+        "outline": "blog_outline",
+        "processed_data": "processed_data"
+      },
+      "outputMapping": {
+        "content": "blog_content"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "order": 7,
+        "maxRetries": 2
+      }
+    },
+    {
+      "agentId": "proofreading_agent",
+      "name": "校对Agent",
+      "type": "llm",
+      "description": "语法和格式检查",
+      "instructions": "你是一个专业的编辑，负责检查博客内容的语法、格式、逻辑和技术准确性。",
+      "model": "qwen-turbo",
+      "config": {
+        "systemPrompt": "你是一个专业的编辑，擅长检查技术文档的语法、格式和逻辑。",
+        "userPrompt": "请对以下博客内容进行校对检查：{content}\n\n请检查以下方面：\n1. 语法和拼写错误\n2. 格式和排版问题\n3. 逻辑连贯性\n4. 技术准确性\n5. 代码示例正确性\n6. 整体可读性\n\n请返回检查结果和修改建议。",
+        "outputKey": "proofreading_result"
+      },
+      "inputMapping": {
+        "content": "blog_content"
+      },
+      "outputMapping": {
+        "proofreading_result": "proofreading_result"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "order": 8
+      }
+    },
+    {
+      "agentId": "quality_check",
+      "name": "质量检查",
+      "type": "condition",
+      "description": "判断内容是否合格",
+      "instructions": "根据校对结果判断博客内容是否达到发布标准",
+      "model": null,
+      "config": {
+        "condition": "proofreading_result.quality_score >= 8 && proofreading_result.critical_issues == 0",
+        "trueNext": "seo_agent",
+        "falseNext": "writing_agent"
+      },
+      "inputMapping": {
+        "proofreading_result": "proofreading_result"
+      },
+      "outputMapping": {
+        "quality_approved": "content_approved",
+        "next_agent": "next_step"
+      },
+      "options": {
+        "toggleAble": false,
+        "controlType": "auto",
+        "order": 9
+      }
+    },
+    {
+      "agentId": "seo_agent",
+      "name": "SEO Agent",
+      "type": "llm",
+      "description": "优化关键词和SEO",
+      "instructions": "你是一个SEO专家，负责优化博客内容的关键词、标题、描述和内部链接。",
+      "model": "qwen-turbo",
+      "config": {
+        "systemPrompt": "你是一个SEO专家，擅长优化技术博客的搜索引擎排名。",
+        "userPrompt": "请对以下博客内容进行SEO优化：{content}\n主题：{topic}\n\n请进行以下优化：\n1. 生成SEO友好的标题\n2. 优化关键词密度\n3. 添加Meta描述\n4. 优化标题层级\n5. 建议内部链接\n6. 生成标签和分类\n\n请返回优化后的内容和SEO建议。",
+        "outputKey": "seo_optimized_content"
+      },
+      "inputMapping": {
+        "content": "blog_content",
+        "topic": "user_topic"
+      },
+      "outputMapping": {
+        "optimized_content": "seo_optimized_content"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "order": 10
+      }
+    },
+    {
+      "agentId": "publish_agent",
+      "name": "发布Agent",
+      "type": "custom",
+      "description": "推送博客到平台",
+      "instructions": "将优化后的博客内容发布到指定的博客平台",
+      "model": null,
+      "config": {
+        "customLogic": "publish_blog",
+        "platform": "wordpress",
+        "autoPublish": false
+      },
+      "inputMapping": {
+        "content": "optimized_content",
+        "topic": "user_topic"
+      },
+      "outputMapping": {
+        "publish_result": "publish_status",
+        "blog_url": "published_url"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "manual",
+        "order": 11
+      }
+    },
+    {
+      "agentId": "completion",
+      "name": "完成",
+      "type": "output",
+      "description": "工作流完成",
+      "instructions": "工作流执行完成，返回最终结果",
+      "model": null,
+      "config": {
+        "outputKey": "final_result"
+      },
+      "inputMapping": {
+        "publish_result": "publish_status",
+        "blog_url": "published_url"
+      },
+      "outputMapping": {
+        "result": "final_result"
+      },
+      "options": {
+        "toggleAble": false,
+        "controlType": "auto",
+        "order": 12
+      }
+    }
+  ],
+  "edges": [
+    {
+      "edgeId": "edge1",
+      "fromAgentId": "START",
+      "toAgentId": "user_input",
+      "label": "开始",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge2",
+      "fromAgentId": "user_input",
+      "toAgentId": "topic_validation_agent",
+      "label": "主题",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge3",
+      "fromAgentId": "topic_validation_agent",
+      "toAgentId": "topic_decision",
+      "label": "验证结果",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge4",
+      "fromAgentId": "topic_decision",
+      "toAgentId": "user_input",
+      "label": "否",
+      "condition": "topic_approved == false",
+      "edgeType": "LOOP",
+      "config": {}
+    },
+    {
+      "edgeId": "edge5",
+      "fromAgentId": "topic_decision",
+      "toAgentId": "search_agent",
+      "label": "是",
+      "condition": "topic_approved == true",
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge6",
+      "fromAgentId": "search_agent",
+      "toAgentId": "data_processing_agent",
+      "label": "搜索结果",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge7",
+      "fromAgentId": "data_processing_agent",
+      "toAgentId": "outline_agent",
+      "label": "处理结果",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge8",
+      "fromAgentId": "outline_agent",
+      "toAgentId": "writing_agent",
+      "label": "大纲",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge9",
+      "fromAgentId": "writing_agent",
+      "toAgentId": "proofreading_agent",
+      "label": "博客内容",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge10",
+      "fromAgentId": "proofreading_agent",
+      "toAgentId": "quality_check",
+      "label": "校对结果",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge11",
+      "fromAgentId": "quality_check",
+      "toAgentId": "writing_agent",
+      "label": "否",
+      "condition": "content_approved == false",
+      "edgeType": "LOOP",
+      "config": {}
+    },
+    {
+      "edgeId": "edge12",
+      "fromAgentId": "quality_check",
+      "toAgentId": "seo_agent",
+      "label": "是",
+      "condition": "content_approved == true",
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge13",
+      "fromAgentId": "seo_agent",
+      "toAgentId": "publish_agent",
+      "label": "SEO优化",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge14",
+      "fromAgentId": "publish_agent",
+      "toAgentId": "completion",
+      "label": "发布结果",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge15",
+      "fromAgentId": "completion",
+      "toAgentId": "END",
+      "label": "完成",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    }
+  ],
+  "globalConfig": {
+    "maxRetries": 3,
+    "timeout": 60000,
+    "enableLogging": true,
+    "enableMetrics": true,
+    "maxLoopIterations": 5,
+    "parallelExecution": false
+  },
+  "metadata": {
+    "createdAt": "2024-01-01T00:00:00Z",
+    "lastUpdatedAt": "2024-01-01T00:00:00Z",
+    "author": "AI Assistant",
+    "tags": ["blog", "writing", "multi-agent", "workflow"],
+    "category": "content-creation",
+    "customFields": {
+      "estimatedDuration": "30-60 minutes",
+      "complexity": "medium",
+      "requiredAgents": 12
+    }
+  }
+} 

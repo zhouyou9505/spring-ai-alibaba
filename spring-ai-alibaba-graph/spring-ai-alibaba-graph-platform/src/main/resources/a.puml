@@ -1,0 +1,27 @@
+@startuml Graph_Diagram
+skinparam usecaseFontSize 14
+skinparam usecaseStereotypeFontSize 12
+skinparam hexagonFontSize 14
+skinparam hexagonStereotypeFontSize 12
+title "Graph Diagram"
+footer
+
+powered by spring-ai-alibaba
+end footer
+circle start<<input>> as __START__
+circle stop as __END__
+usecase "reception_agent"<<Node>>
+usecase "issue_classification_agent"<<Node>>
+usecase "technical_support_agent"<<Node>>
+usecase "satisfaction_survey_agent"<<Node>>
+hexagon "check state" as condition1<<Condition>>
+"__START__" -down-> "reception_agent"
+"reception_agent" -down-> "issue_classification_agent"
+"issue_classification_agent" .down.> "condition1"
+"condition1" .down.> "technical_support_agent": "true"
+'"issue_classification_agent" .down.> "technical_support_agent": "true"
+"condition1" .down.> "technical_support_agent": "false"
+'"issue_classification_agent" .down.> "technical_support_agent": "false"
+"technical_support_agent" -down-> "satisfaction_survey_agent"
+"satisfaction_survey_agent" -down-> "__END__"
+@enduml

@@ -1,0 +1,253 @@
+{
+  "examples": [
+    {
+      "name": "创建智能客服系统",
+      "description": "通过自然语言描述创建完整的智能客服多Agent系统",
+      "endpoint": "POST /api/copilot/adjust",
+      "request": {
+        "userRequest": "创建一个智能客服系统，包含以下功能：1. 自动接待客户并收集基本信息 2. 智能问题分类和路由 3. 专业知识解答和技术支持 4. 情感分析和客户满意度评估 5. 自动生成服务报告"
+      },
+      "expectedResponse": {
+        "success": true,
+        "message": "工作流调整成功",
+        "workflowId": "smart-customer-service-system",
+        "workflowName": "智能客服系统",
+        "agentCount": 4,
+        "edgeCount": 5,
+        "schema": {
+          "workflowId": "smart-customer-service-system",
+          "name": "智能客服系统",
+          "description": "智能客服多Agent协作系统",
+          "agents": [
+            {
+              "agentId": "reception_agent",
+              "name": "接待Agent",
+              "type": "llm",
+              "description": "自动接待客户并收集基本信息",
+              "instructions": "你是一个专业的客服接待员，负责友好地接待客户并收集基本信息"
+            },
+            {
+              "agentId": "classification_agent",
+              "name": "分类Agent",
+              "type": "llm",
+              "description": "智能问题分类和路由",
+              "instructions": "你是一个问题分类专家，负责分析客户问题并将其分类到相应的处理流程"
+            }
+          ],
+          "edges": [
+            {
+              "edgeId": "edge1",
+              "fromAgentId": "START",
+              "toAgentId": "reception_agent",
+              "label": "开始",
+              "edgeType": "SEQUENTIAL"
+            },
+            {
+              "edgeId": "edge2",
+              "fromAgentId": "reception_agent",
+              "toAgentId": "classification_agent",
+              "label": "客户信息",
+              "edgeType": "SEQUENTIAL"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "添加数据分析Agent",
+      "description": "向现有工作流添加新的数据分析Agent",
+      "endpoint": "POST /api/copilot/adjust",
+      "request": {
+        "workflowId": "existing-workflow-id",
+        "userRequest": "添加一个数据分析Agent，负责分析客户交互数据，生成报告和建议，包括客户满意度趋势、问题类型分布、响应时间分析等"
+      },
+      "expectedResponse": {
+        "success": true,
+        "message": "工作流调整成功",
+        "workflowId": "existing-workflow-id",
+        "schema": {
+          "agents": [
+            {
+              "agentId": "data_analysis_agent",
+              "name": "数据分析Agent",
+              "type": "llm",
+              "description": "分析客户交互数据，生成报告和建议",
+              "instructions": "你是一个数据分析专家，负责分析客户交互数据并生成有价值的报告和建议"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "改进Agent指令",
+      "description": "优化现有Agent的指令以提高性能",
+      "endpoint": "POST /api/copilot/adjust",
+      "request": {
+        "workflowId": "existing-workflow-id",
+        "userRequest": "改进技术支持Agent的指令，增加更详细的技术问题诊断步骤，包括问题重现、日志分析、解决方案验证等，提高问题解决效率和客户满意度"
+      },
+      "expectedResponse": {
+        "success": true,
+        "message": "工作流调整成功",
+        "workflowId": "existing-workflow-id",
+        "schema": {
+          "agents": [
+            {
+              "agentId": "tech_support_agent",
+              "name": "技术支持Agent",
+              "type": "llm",
+              "description": "提供专业技术支持",
+              "instructions": "你是一个专业的技术支持专家，请按照以下步骤处理技术问题：1. 问题重现和确认 2. 收集相关日志和错误信息 3. 分析问题根本原因 4. 提供解决方案并验证 5. 记录处理过程和结果"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "添加工具",
+      "description": "向工作流添加新的工具",
+      "endpoint": "POST /api/copilot/adjust",
+      "request": {
+        "workflowId": "existing-workflow-id",
+        "userRequest": "添加知识库搜索工具，用于快速检索技术文档、FAQ、解决方案等，支持关键词搜索和相似度匹配"
+      },
+      "expectedResponse": {
+        "success": true,
+        "message": "工作流调整成功",
+        "workflowId": "existing-workflow-id",
+        "schema": {
+          "tools": [
+            {
+              "name": "knowledge_base_search",
+              "description": "知识库搜索工具",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "description": "搜索查询"
+                  },
+                  "category": {
+                    "type": "string",
+                    "description": "文档类别"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "复杂工作流调整",
+      "description": "使用自然语言描述进行复杂的工作流调整",
+      "endpoint": "POST /api/copilot/adjust",
+      "request": {
+        "workflowId": "customer-service-workflow",
+        "userRequest": "在现有的客服工作流中添加一个情感分析Agent，用于分析客户情绪并提供相应的服务策略。同时改进接待Agent，让它能够根据客户情绪调整回复语气。另外添加一个自动升级机制，当客户情绪为负面时自动转接人工客服。"
+      },
+      "expectedResponse": {
+        "success": true,
+        "message": "工作流调整成功",
+        "workflowId": "customer-service-workflow",
+        "workflowName": "增强版客户服务系统",
+        "agentCount": 5,
+        "edgeCount": 8,
+        "schema": {
+          "workflowId": "customer-service-workflow",
+          "name": "增强版客户服务系统",
+          "description": "包含情感分析的智能客服系统",
+          "agents": [
+            {
+              "agentId": "emotion_analysis_agent",
+              "name": "情感分析Agent",
+              "type": "llm",
+              "description": "分析客户情绪并提供服务策略",
+              "instructions": "你是一个情感分析专家，负责分析客户的情绪状态并提供相应的服务策略建议"
+            },
+            {
+              "agentId": "escalation_agent",
+              "name": "升级Agent",
+              "type": "condition",
+              "description": "自动升级机制",
+              "instructions": "根据客户情绪和问题复杂度决定是否需要转接人工客服"
+            }
+          ],
+          "edges": [
+            {
+              "edgeId": "emotion_edge",
+              "fromAgentId": "reception_agent",
+              "toAgentId": "emotion_analysis_agent",
+              "label": "客户情绪",
+              "edgeType": "SEQUENTIAL"
+            },
+            {
+              "edgeId": "escalation_edge",
+              "fromAgentId": "emotion_analysis_agent",
+              "toAgentId": "escalation_agent",
+              "label": "情绪分析结果",
+              "edgeType": "SEQUENTIAL"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "性能优化",
+      "description": "优化工作流性能，添加并行处理和重试机制",
+      "endpoint": "POST /api/copilot/adjust",
+      "request": {
+        "workflowId": "tech-support-workflow",
+        "userRequest": "优化技术支持工作流，添加并行处理能力，让问题分类Agent和知识库Agent可以同时工作，提高响应速度。同时添加重试机制和超时处理。"
+      },
+      "expectedResponse": {
+        "success": true,
+        "message": "工作流调整成功",
+        "workflowId": "tech-support-workflow",
+        "workflowName": "优化版技术支持工作流",
+        "schema": {
+          "workflowId": "tech-support-workflow",
+          "name": "优化版技术支持工作流",
+          "description": "支持并行处理的技术支持工作流",
+          "agents": [
+            {
+              "agentId": "parallel_classifier",
+              "name": "并行分类Agent",
+              "type": "llm",
+              "description": "并行处理问题分类",
+              "instructions": "你是一个并行处理专家，负责同时处理多个问题分类任务"
+            }
+          ],
+          "edges": [
+            {
+              "edgeId": "parallel_edge",
+              "fromAgentId": "input_agent",
+              "toAgentId": "parallel_classifier",
+              "label": "并行处理",
+              "edgeType": "PARALLEL"
+            }
+          ],
+          "globalConfig": {
+            "parallelExecution": true,
+            "maxRetries": 3,
+            "timeout": 30000
+          }
+        }
+      }
+    }
+  ],
+  "usageTips": [
+    "提供详细、清晰的自然语言描述，包含具体的功能需求和约束条件",
+    "对于复杂的工作流，建议分步骤进行调整，而不是一次性描述所有需求",
+    "在应用生成的配置前，检查生成的WorkflowSchema是否符合预期",
+    "实现适当的错误处理机制，处理LLM生成失败或配置无效的情况",
+    "在修改现有工作流时，考虑保留历史版本或创建备份"
+  ],
+  "bestPractices": [
+    "使用具体的描述而不是抽象的概念",
+    "明确指定Agent的职责和交互方式",
+    "考虑工作流的性能和可扩展性",
+    "定期测试和验证生成的工作流配置",
+    "保持工作流配置的一致性和可维护性"
+  ]
+} 

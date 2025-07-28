@@ -1,0 +1,21 @@
+server:
+  port: 0
+
+spring:
+  ai:
+    dashscope:
+      api-key: ${DASHSCOPE_API_KEY:test-api-key}
+      chat:
+        options:
+          model: qwen-turbo
+          temperature: 0.7
+
+workflow:
+  platform:
+    name: "Spring AI Alibaba Graph Platform Test"
+    version: "1.0.0-test"
+
+logging:
+  level:
+    com.alibaba.cloud.ai: DEBUG
+    org.springframework.ai: DEBUG 

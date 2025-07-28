@@ -1,0 +1,465 @@
+{
+  "type": "object",
+  "properties": {
+    "workflowId": {
+      "type": "string",
+      "description": "工作流的唯一标识符"
+    },
+    "name": {
+      "type": "string",
+      "description": "工作流名称"
+    },
+    "description": {
+      "type": "string",
+      "description": "工作流描述"
+    },
+    "version": {
+      "type": "string",
+      "description": "工作流版本号"
+    },
+    "agents": {
+      "type": "array",
+      "description": "Agent配置列表",
+      "items": {
+        "type": "object",
+        "properties": {
+          "agentId": {
+            "type": "string",
+            "description": "Agent的唯一标识符"
+          },
+          "name": {
+            "type": "string",
+            "description": "Agent名称"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["llm", "react", "react_with_human", "reflect"],
+            "description": "Agent类型：llm（LLM Agent）、react（ReactAgent）、react_with_human（ReactAgentWithHuman）、reflect（ReflectAgent）"
+          },
+          "description": {
+            "type": "string",
+            "description": "Agent描述"
+          },
+          "instructions": {
+            "type": "string",
+            "description": "Agent的具体指令"
+          },
+          "model": {
+            "type": "string",
+            "description": "使用的AI模型"
+          },
+          "config": {
+            "type": "object",
+            "description": "Agent的具体配置",
+            "additionalProperties": true
+          },
+          "inputMapping": {
+            "type": "object",
+            "description": "输入数据映射",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "outputMapping": {
+            "type": "object",
+            "description": "输出数据映射",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "options": {
+            "type": "object",
+            "description": "Agent选项配置",
+            "properties": {
+              "toggleAble": {
+                "type": "boolean",
+                "default": true,
+                "description": "是否可启用/禁用"
+              },
+              "ragReturnType": {
+                "type": "string",
+                "enum": ["chunks", "content"],
+                "default": "chunks",
+                "description": "RAG返回类型"
+              },
+              "ragK": {
+                "type": "number",
+                "default": 3,
+                "description": "RAG检索数量"
+              },
+              "controlType": {
+                "type": "string",
+                "enum": ["retain", "relinquish_to_parent", "relinquish_to_start", "auto", "manual"],
+                "default": "auto",
+                "description": "控制类型"
+              },
+              "outputVisibility": {
+                "type": "string",
+                "enum": ["user_facing", "internal", "public"],
+                "default": "public",
+                "description": "输出可见性"
+              },
+              "examples": {
+                "type": "string",
+                "description": "示例数据"
+              },
+              "order": {
+                "type": "integer",
+                "description": "执行顺序"
+              },
+              "disabled": {
+                "type": "boolean",
+                "default": false,
+                "description": "是否禁用"
+              },
+              "locked": {
+                "type": "boolean",
+                "default": false,
+                "description": "是否锁定"
+              },
+              "maxCallsPerParentAgent": {
+                "type": "number",
+                "default": 3,
+                "description": "每个父Agent的最大调用次数"
+              },
+              "maxRetries": {
+                "type": "number",
+                "default": 3,
+                "description": "最大重试次数"
+              },
+              "timeout": {
+                "type": "number",
+                "default": 30000,
+                "description": "超时时间（毫秒）"
+              },
+              "global": {
+                "type": "boolean",
+                "default": false,
+                "description": "是否为全局Agent"
+              },
+              "ragDataSources": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "RAG数据源"
+              }
+            },
+            "additionalProperties": false
+          },
+          "tools": {
+            "type": "array",
+            "description": "Agent可用的工具列表。如果为空且Agent类型为react、react_with_human、reflect，将自动添加mock_tool",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "工具名称。如果为mock_tool，将自动生成模拟参数和描述"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "工具描述（可选，mock_tool会自动生成）"
+                },
+                "parameters": {
+                  "type": "object",
+                  "description": "工具参数定义（可选，mock_tool会自动生成）",
+                  "additionalProperties": true
+                },
+                "autoMock": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "是否自动生成mock工具（当工具不存在时）"
+                }
+              },
+              "required": ["name"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["agentId", "name", "type", "description", "instructions"],
+        "additionalProperties": false
+      }
+    },
+    "edges": {
+      "type": "array",
+      "description": "边配置列表",
+      "items": {
+        "type": "object",
+        "properties": {
+          "edgeId": {
+            "type": "string",
+            "description": "边的唯一标识符"
+          },
+          "fromAgentId": {
+            "type": "string",
+            "description": "起始Agent ID"
+          },
+          "toAgentId": {
+            "type": "string",
+            "description": "目标Agent ID"
+          },
+          "label": {
+            "type": "string",
+            "description": "边的标签"
+          },
+          "condition": {
+            "type": "string",
+            "description": "条件表达式"
+          },
+          "edgeType": {
+            "type": "string",
+            "enum": ["SEQUENTIAL", "CONDITIONAL", "LOOP", "PARALLEL"],
+            "default": "SEQUENTIAL",
+            "description": "边类型"
+          },
+          "config": {
+            "type": "object",
+            "description": "边配置",
+            "additionalProperties": true
+          }
+        },
+        "required": ["edgeId", "fromAgentId", "toAgentId"],
+        "additionalProperties": false
+      }
+    },
+    "prompts": {
+      "type": "array",
+      "description": "提示词配置列表",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "提示词名称"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["base_prompt", "style_prompt", "greeting", "system_prompt", "user_prompt"],
+            "description": "提示词类型"
+          },
+          "prompt": {
+            "type": "string",
+            "description": "提示词内容"
+          },
+          "description": {
+            "type": "string",
+            "description": "提示词描述"
+          }
+        },
+        "required": ["name", "type", "prompt"],
+        "additionalProperties": false
+      }
+    },
+    "tools": {
+      "type": "array",
+      "description": "工具配置列表",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "工具名称"
+          },
+          "description": {
+            "type": "string",
+            "description": "工具描述"
+          },
+          "mockTool": {
+            "type": "boolean",
+            "default": false,
+            "description": "是否为模拟工具"
+          },
+          "autoSubmitMockedResponse": {
+            "type": "boolean",
+            "default": false,
+            "description": "是否自动提交模拟响应"
+          },
+          "mockInstructions": {
+            "type": "string",
+            "description": "模拟指令"
+          },
+          "parameters": {
+            "type": "object",
+            "description": "工具参数定义",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "object"
+              },
+              "properties": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "enum": {
+                      "type": "array"
+                    },
+                    "default": {},
+                    "minimum": {
+                      "type": "number"
+                    },
+                    "maximum": {
+                      "type": "number"
+                    },
+                    "items": {},
+                    "format": {
+                      "type": "string"
+                    },
+                    "pattern": {
+                      "type": "string"
+                    },
+                    "minLength": {
+                      "type": "number"
+                    },
+                    "maxLength": {
+                      "type": "number"
+                    },
+                    "minItems": {
+                      "type": "number"
+                    },
+                    "maxItems": {
+                      "type": "number"
+                    },
+                    "uniqueItems": {
+                      "type": "boolean"
+                    },
+                    "multipleOf": {
+                      "type": "number"
+                    },
+                    "examples": {
+                      "type": "array"
+                    }
+                  },
+                  "required": ["type", "description"],
+                  "additionalProperties": false
+                }
+              },
+              "required": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": ["type", "properties"],
+            "additionalProperties": false,
+            "default": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          },
+          "isMcp": {
+            "type": "boolean",
+            "default": false,
+            "description": "是否为MCP工具"
+          },
+          "isLibrary": {
+            "type": "boolean",
+            "default": false,
+            "description": "是否为库工具"
+          },
+          "mcpServerName": {
+            "type": "string",
+            "description": "MCP服务器名称"
+          },
+          "mcpServerURL": {
+            "type": "string",
+            "description": "MCP服务器URL"
+          }
+        },
+        "required": ["name", "description"],
+        "additionalProperties": false
+      }
+    },
+    "startAgent": {
+      "type": "string",
+      "description": "起始Agent ID"
+    },
+    "globalConfig": {
+      "type": "object",
+      "description": "全局配置",
+      "properties": {
+        "maxRetries": {
+          "type": "number",
+          "default": 3,
+          "description": "最大重试次数"
+        },
+        "timeout": {
+          "type": "number",
+          "default": 30000,
+          "description": "超时时间（毫秒）"
+        },
+        "enableLogging": {
+          "type": "boolean",
+          "default": true,
+          "description": "是否启用日志"
+        },
+        "enableMetrics": {
+          "type": "boolean",
+          "default": true,
+          "description": "是否启用指标"
+        },
+        "maxLoopIterations": {
+          "type": "number",
+          "default": 5,
+          "description": "最大循环迭代次数"
+        },
+        "parallelExecution": {
+          "type": "boolean",
+          "default": false,
+          "description": "是否并行执行"
+        }
+      },
+      "additionalProperties": true
+    },
+    "metadata": {
+      "type": "object",
+      "description": "工作流元数据",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "创建时间"
+        },
+        "lastUpdatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "最后更新时间"
+        },
+        "author": {
+          "type": "string",
+          "description": "作者"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "标签列表"
+        },
+        "category": {
+          "type": "string",
+          "description": "分类"
+        },
+        "customFields": {
+          "type": "object",
+          "description": "自定义字段",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["workflowId", "name", "agents", "edges"],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

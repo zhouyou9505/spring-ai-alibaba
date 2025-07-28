@@ -1,0 +1,184 @@
+{
+  "workflowId": "schema-tools-workflow-demo",
+  "name": "Schema 工具工作流演示",
+  "description": "展示如何在 WorkflowSchema 中定义工具，并使用 MockTool 进行模拟",
+  "version": "1.0.0",
+  "agents": [
+    {
+      "agentId": "research_agent",
+      "name": "研究Agent",
+      "type": "react",
+      "description": "使用 Schema 定义的工具进行研究",
+      "instructions": "你是一个研究助手，使用可用的工具进行研究。",
+      "model": "qwen-turbo",
+      "config": {
+        "prompt": "请研究以下主题：{topic}。使用可用的工具来获取信息。",
+        "maxIterations": 8,
+        "inputKey": "topic",
+        "outputKey": "research_result"
+      },
+      "inputMapping": {
+        "topic": "user_topic"
+      },
+      "outputMapping": {
+        "research_result": "research_output"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      }
+    },
+    {
+      "agentId": "analysis_agent",
+      "name": "分析Agent",
+      "type": "react_with_human",
+      "description": "使用 Schema 定义的工具进行分析",
+      "instructions": "你是一个分析助手，使用可用的工具进行数据分析。",
+      "model": "qwen-turbo",
+      "config": {
+        "prompt": "请分析以下数据：{data}。使用可用的工具进行分析。",
+        "maxIterations": 10,
+        "inputKey": "data",
+        "outputKey": "analysis_result"
+      },
+      "inputMapping": {
+        "data": "research_output"
+      },
+      "outputMapping": {
+        "analysis_result": "final_result"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      }
+    }
+  ],
+  "edges": [
+    {
+      "edgeId": "edge1",
+      "fromAgentId": "START",
+      "toAgentId": "research_agent",
+      "label": "开始研究",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge2",
+      "fromAgentId": "research_agent",
+      "toAgentId": "analysis_agent",
+      "label": "分析数据",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge3",
+      "fromAgentId": "analysis_agent",
+      "toAgentId": "END",
+      "label": "完成",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    }
+  ],
+  "tools": [
+    {
+      "name": "web_search",
+      "description": "搜索网络信息",
+      "mockTool": true,
+      "autoSubmitMockedResponse": true,
+      "instructions": "模拟网络搜索，返回相关搜索结果。搜索内容应该包括最新的信息、统计数据、专家观点等。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "搜索查询"
+          },
+          "max_results": {
+            "type": "number",
+            "description": "最大结果数量",
+            "default": 5
+          }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "data_analysis",
+      "description": "分析数据并生成报告",
+      "mockTool": true,
+      "autoSubmitMockedResponse": true,
+      "mockInstructions": "模拟数据分析，生成详细的分析报告。包括数据趋势、关键指标、可视化建议等。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "string",
+            "description": "要分析的数据"
+          },
+          "analysis_type": {
+            "type": "string",
+            "description": "分析类型",
+            "enum": ["trend", "correlation", "prediction", "summary"]
+          }
+        },
+        "required": ["data"]
+      }
+    },
+    {
+      "name": "content_generator",
+      "description": "生成内容",
+      "mockTool": true,
+      "autoSubmitMockedResponse": true,
+      "mockInstructions": "模拟内容生成，创建高质量的内容。包括文章、报告、总结等。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "description": "内容主题"
+          },
+          "content_type": {
+            "type": "string",
+            "description": "内容类型",
+            "enum": ["article", "report", "summary", "presentation"]
+          },
+          "length": {
+            "type": "string",
+            "description": "内容长度",
+            "enum": ["short", "medium", "long"]
+          }
+        },
+        "required": ["topic"]
+      }
+    }
+  ],
+  "globalConfig": {
+    "maxRetries": 3,
+    "timeout": 30000,
+    "enableLogging": true,
+    "enableMetrics": true,
+    "maxLoopIterations": 3,
+    "parallelExecution": false
+  },
+  "metadata": {
+    "createdAt": "2024-01-01T00:00:00Z",
+    "lastUpdatedAt": "2024-01-01T00:00:00Z",
+    "author": "AI Assistant",
+    "tags": ["demo", "schema-tools", "mock-tools"],
+    "category": "demonstration",
+    "customFields": {
+      "framework": "spring-ai-alibaba-graph",
+      "version": "1.0.0",
+      "features": ["SchemaTools", "MockTool", "ToolDefinition"]
+    }
+  }
+} 

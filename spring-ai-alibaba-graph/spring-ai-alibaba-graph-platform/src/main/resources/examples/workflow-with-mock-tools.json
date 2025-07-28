@@ -1,0 +1,146 @@
+{
+  "workflowId": "mock-tools-workflow-demo",
+  "name": "MockTool 工作流演示",
+  "description": "展示如何使用 MockTool 来处理工具不存在的情况",
+  "version": "1.0.0",
+  "agents": [
+    {
+      "agentId": "research_agent",
+      "name": "研究Agent",
+      "type": "react",
+      "description": "使用 MockTool 进行研究",
+      "instructions": "你是一个研究助手，当实际工具不可用时，会使用 MockTool 来模拟工具执行。",
+      "model": "qwen-turbo",
+      "config": {
+        "prompt": "请研究以下主题：{topic}。如果遇到工具调用，请使用可用的工具。",
+        "maxIterations": 8,
+        "inputKey": "topic",
+        "outputKey": "research_result"
+      },
+      "inputMapping": {
+        "topic": "user_topic"
+      },
+      "outputMapping": {
+        "research_result": "research_output"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      }
+    },
+    {
+      "agentId": "collaborative_agent",
+      "name": "协作Agent",
+      "type": "react_with_human",
+      "description": "与人类协作，使用 MockTool 处理工具调用",
+      "instructions": "你是一个协作助手，能够与人类一起工作，当需要工具时会使用 MockTool。",
+      "model": "qwen-turbo",
+      "config": {
+        "prompt": "请与用户协作解决以下问题：{problem}。在需要时使用可用的工具。",
+        "maxIterations": 10,
+        "inputKey": "problem",
+        "outputKey": "solution"
+      },
+      "inputMapping": {
+        "problem": "user_problem"
+      },
+      "outputMapping": {
+        "solution": "final_solution"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      }
+    },
+    {
+      "agentId": "quality_agent",
+      "name": "质量Agent",
+      "type": "reflect",
+      "description": "反思和改进内容质量",
+      "instructions": "你是一个内容质量专家，负责反思和改进内容。",
+      "model": "qwen-turbo",
+      "config": {
+        "maxIterations": 3,
+        "inputKey": "content",
+        "outputKey": "improved_content"
+      },
+      "inputMapping": {
+        "content": "research_output"
+      },
+      "outputMapping": {
+        "improved_content": "final_result"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      }
+    }
+  ],
+  "edges": [
+    {
+      "edgeId": "edge1",
+      "fromAgentId": "START",
+      "toAgentId": "research_agent",
+      "label": "开始研究",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge2",
+      "fromAgentId": "research_agent",
+      "toAgentId": "collaborative_agent",
+      "label": "协作处理",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge3",
+      "fromAgentId": "collaborative_agent",
+      "toAgentId": "quality_agent",
+      "label": "质量改进",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge4",
+      "fromAgentId": "quality_agent",
+      "toAgentId": "END",
+      "label": "完成",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    }
+  ],
+  "globalConfig": {
+    "maxRetries": 3,
+    "timeout": 30000,
+    "enableLogging": true,
+    "enableMetrics": true,
+    "maxLoopIterations": 3,
+    "parallelExecution": false
+  },
+  "metadata": {
+    "createdAt": "2024-01-01T00:00:00Z",
+    "lastUpdatedAt": "2024-01-01T00:00:00Z",
+    "author": "AI Assistant",
+    "tags": ["demo", "mock-tools", "fallback"],
+    "category": "demonstration",
+    "customFields": {
+      "framework": "spring-ai-alibaba-graph",
+      "version": "1.0.0",
+      "features": ["MockTool", "ToolFallback", "GracefulDegradation"]
+    }
+  }
+} 

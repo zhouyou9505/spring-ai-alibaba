@@ -1,0 +1,149 @@
+{
+  "workflowId": "auto-mock-workflow-demo",
+  "name": "自动Mock工具工作流演示",
+  "description": "展示当Agent没有配置工具时，自动添加mock_tool的情况",
+  "version": "1.0.0",
+  "agents": [
+    {
+      "agentId": "react_agent_no_tools",
+      "name": "React Agent（无工具）",
+      "type": "react",
+      "description": "这个Agent没有配置工具，将自动添加mock_tool",
+      "instructions": "你是一个React Agent，使用可用的工具进行任务处理。",
+      "model": "qwen-turbo",
+      "config": {
+        "prompt": "请处理以下任务：{task}。使用可用的工具来完成任务。",
+        "maxIterations": 5,
+        "inputKey": "task",
+        "outputKey": "result"
+      },
+      "inputMapping": {
+        "task": "user_task"
+      },
+      "outputMapping": {
+        "result": "task_result"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      },
+      "tools": []
+    },
+    {
+      "agentId": "react_with_human_no_tools",
+      "name": "React With Human Agent（无工具）",
+      "type": "react_with_human",
+      "description": "这个Agent没有配置工具，将自动添加mock_tool",
+      "instructions": "你是一个React With Human Agent，与用户协作完成任务。",
+      "model": "qwen-turbo",
+      "config": {
+        "prompt": "请与用户协作处理以下任务：{task}。在需要时使用可用的工具。",
+        "maxIterations": 8,
+        "inputKey": "task",
+        "outputKey": "collaboration_result"
+      },
+      "inputMapping": {
+        "task": "task_result"
+      },
+      "outputMapping": {
+        "collaboration_result": "final_result"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      },
+      "tools": []
+    },
+    {
+      "agentId": "reflect_agent_no_tools",
+      "name": "Reflect Agent（无工具）",
+      "type": "reflect",
+      "description": "这个Agent没有配置工具，将自动添加mock_tool",
+      "instructions": "你是一个Reflect Agent，反思和改进内容质量。",
+      "model": "qwen-turbo",
+      "config": {
+        "maxIterations": 3,
+        "inputKey": "content",
+        "outputKey": "improved_content"
+      },
+      "inputMapping": {
+        "content": "collaboration_result"
+      },
+      "outputMapping": {
+        "improved_content": "final_output"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      },
+      "tools": []
+    }
+  ],
+  "edges": [
+    {
+      "edgeId": "edge1",
+      "fromAgentId": "START",
+      "toAgentId": "react_agent_no_tools",
+      "label": "开始处理",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge2",
+      "fromAgentId": "react_agent_no_tools",
+      "toAgentId": "react_with_human_no_tools",
+      "label": "协作处理",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge3",
+      "fromAgentId": "react_with_human_no_tools",
+      "toAgentId": "reflect_agent_no_tools",
+      "label": "反思改进",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge4",
+      "fromAgentId": "reflect_agent_no_tools",
+      "toAgentId": "END",
+      "label": "完成",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    }
+  ],
+  "globalConfig": {
+    "maxRetries": 3,
+    "timeout": 30000,
+    "enableLogging": true,
+    "enableMetrics": true,
+    "maxLoopIterations": 3,
+    "parallelExecution": false
+  },
+  "metadata": {
+    "createdAt": "2024-01-01T00:00:00Z",
+    "lastUpdatedAt": "2024-01-01T00:00:00Z",
+    "author": "AI Assistant",
+    "tags": ["demo", "auto-mock", "tools"],
+    "category": "demonstration",
+    "customFields": {
+      "framework": "spring-ai-alibaba-graph",
+      "version": "1.0.0",
+      "features": ["AutoMockTool", "ToolDefinition"]
+    }
+  }
+} 

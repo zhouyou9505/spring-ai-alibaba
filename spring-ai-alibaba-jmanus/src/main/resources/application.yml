@@ -1,5 +1,6 @@
 server:
-  port: 18080
+  port: 3002
+  address: 0.0.0.0
 spring:
   application:
     name: spring-ai-alibaba-openmanus
@@ -15,8 +16,8 @@ spring:
       database: 1
   ai:
     openai:
+      api-key:  sk-762e6e532c8a4745b881bbf2a7db7608
       base-url: https://dashscope.aliyuncs.com/compatible-mode
-      api-key:  sk-9930385949b643e19194481410d2eeef
       chat:
         options:
           model: qwen-plus-latest

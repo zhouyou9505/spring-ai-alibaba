@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.Map;
 
 @Slf4j
-@RequestMapping("/api/copilot/")
+@RequestMapping("/")
 @RestController
 @RequiredArgsConstructor
 public class CopilotController {
