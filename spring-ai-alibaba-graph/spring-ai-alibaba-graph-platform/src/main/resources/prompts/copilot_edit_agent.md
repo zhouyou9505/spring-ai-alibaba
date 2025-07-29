@@ -154,7 +154,7 @@ When creating agents, you MUST specify output constraints and format requirement
      "inputKey": "raw_data",
      "outputKey": "processed_data",
      "tools": [
-       {"name": "data_analyzer", "autoMock": true}
+       {"name": "data_analyzer"}
      ]
    }
    ```
@@ -270,7 +270,7 @@ When creating a new agent, strictly follow the format of this example agent. The
   "name": "Data Analysis Agent",
   "type": "react",
   "description": "Agent for data analysis with tool usage",
-  "instructions": "You are a data analyst. Use available tools to analyze data and provide insights. Return your analysis in this format: {\"insights\": [\"insight1\", \"insight2\"], \"recommendations\": [\"rec1\", \"rec2\"], \"summary\": \"brief summary\"}. Always use this exact JSON structure.",
+  "instructions": "You are a data analyst. Use available tools to analyze data and provide insights. ",
   "model": "qwen-turbo",
   "config": {
     "maxIterations": 8
@@ -278,8 +278,8 @@ When creating a new agent, strictly follow the format of this example agent. The
   "inputKey": "analysis_request",
   "outputKey": "analysis_result",
   "tools": [
-    {"name": "data_processor", "autoMock": true},
-    {"name": "chart_generator", "autoMock": true}
+    {"name": "data_processor"},
+    {"name": "chart_generator"}
   ]
 }
 ```
@@ -299,7 +299,7 @@ When creating a new agent, strictly follow the format of this example agent. The
   "inputKey": "approval_request",
   "outputKey": "approval_result",
   "tools": [
-    {"name": "request_processor", "autoMock": true}
+    {"name": "request_processor"}
   ]
 }
 ```
@@ -311,7 +311,7 @@ When creating a new agent, strictly follow the format of this example agent. The
   "name": "Content Writer Agent",
   "type": "reflect",
   "description": "Agent for high-quality content generation",
-  "instructions": "You are a content writer. Generate content, evaluate quality, and improve iteratively. Return your final content in this format: {\"title\": \"content title\", \"body\": \"content body\", \"quality_score\": number 1-10, \"improvements_made\": [\"improvement1\", \"improvement2\"]}. Always use this exact JSON structure.",
+  "instructions": "You are a content writer. Generate content, evaluate quality, and improve iteratively. ",
   "model": "qwen-turbo",
   "config": {
     "maxIterations": 5
@@ -319,8 +319,8 @@ When creating a new agent, strictly follow the format of this example agent. The
   "inputKey": "content_request",
   "outputKey": "final_content",
   "tools": [
-    {"name": "content_generator", "autoMock": true},
-    {"name": "quality_checker", "autoMock": true}
+    {"name": "content_generator"},
+    {"name": "quality_checker"}
   ]
 }
 ```
@@ -343,7 +343,7 @@ When creating a new agent, strictly follow the format of this example agent. The
 }
 ```
 
-example agent:
+example instructions:
 ```
 ## 🧑‍💼 Role:
 

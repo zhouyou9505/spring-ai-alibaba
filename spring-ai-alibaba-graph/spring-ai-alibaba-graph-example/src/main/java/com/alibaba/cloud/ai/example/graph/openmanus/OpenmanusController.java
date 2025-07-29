@@ -35,6 +35,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static com.alibaba.cloud.ai.example.graph.openmanus.OpenManusPrompt.PLANNING_SYSTEM_PROMPT;
@@ -96,9 +97,9 @@ public class OpenmanusController {
 			strategies.put("step_output", new ReplaceStrategy());
 			strategies.put("final_output", new ReplaceStrategy());
 			return strategies;
-		}).addNode("planning_agent", planningAgent.asAsyncNodeAction("input", "plan"))
+		}).addNode("planning_agent", planningAgent.asAsyncNodeAction(List.of("input"), "plan"))
 			.addNode("supervisor_agent", node_async(supervisorAgent))
-			.addNode("step_executing_agent", stepAgent.asAsyncNodeAction("step_prompt", "step_output"))
+			.addNode("step_executing_agent", stepAgent.asAsyncNodeAction(List.of("step_prompt"), "step_output"))
 
 			.addEdge(START, "planning_agent")
 			.addEdge("planning_agent", "supervisor_agent")

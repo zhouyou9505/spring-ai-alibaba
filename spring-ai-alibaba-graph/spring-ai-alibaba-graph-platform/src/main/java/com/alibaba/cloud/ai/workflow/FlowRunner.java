@@ -62,6 +62,7 @@ public class FlowRunner {
     /**
      * 运行工作流
      */
+    @SneakyThrows
     public Map<String, Object> runWorkflow(String workflowId, Map<String, Object> input) {
         logger.info("运行工作流: {}", workflowId);
 

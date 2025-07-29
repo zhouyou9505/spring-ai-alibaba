@@ -244,8 +244,8 @@
   "inputKey": "analysis_request",
   "outputKey": "analysis_result",
   "tools": [
-    {"name": "data_processor", "autoMock": true},
-    {"name": "chart_generator", "autoMock": true}
+    {"name": "data_processor"},
+    {"name": "chart_generator"}
   ]
 }
 ```
@@ -268,7 +268,7 @@
   "inputKey": "approval_request",
   "outputKey": "approval_result",
   "tools": [
-    {"name": "request_processor", "autoMock": true}
+    {"name": "request_processor"}
   ]
 }
 ```
@@ -291,8 +291,8 @@
   "inputKey": "content_request",
   "outputKey": "final_content",
   "tools": [
-    {"name": "content_generator", "autoMock": true},
-    {"name": "quality_checker", "autoMock": true}
+    {"name": "content_generator"},
+    {"name": "quality_checker"}
   ]
 }
 ```
@@ -350,7 +350,7 @@
   "name": "数据分析 Agent",
   "type": "react",
   "description": "支持工具调用的数据分析 Agent",
-  "instructions": "你是一名数据分析师。请使用可用工具对数据进行分析，并提供见解。返回的格式必须为：{\"insights\": [\"洞察1\", \"洞察2\"], \"recommendations\": [\"建议1\", \"建议2\"], \"summary\": \"简要总结\"}。必须使用这个精确的 JSON 结构。",
+  "instructions": "你是一名数据分析师。请使用可用工具对数据进行分析，并提供见解。",
   "model": "qwen-turbo",
   "config": {
     "maxIterations": 8
@@ -358,8 +358,8 @@
   "inputKey": "analysis_request",
   "outputKey": "analysis_result",
   "tools": [
-    {"name": "data_processor", "autoMock": true},
-    {"name": "chart_generator", "autoMock": true}
+    {"name": "data_processor"},
+    {"name": "chart_generator"}
   ]
 }
 ```
@@ -382,7 +382,7 @@
   "inputKey": "approval_request",
   "outputKey": "approval_result",
   "tools": [
-    {"name": "request_processor", "autoMock": true}
+    {"name": "request_processor"}
   ]
 }
 ```
@@ -397,7 +397,7 @@
   "name": "内容创作 Agent",
   "type": "reflect",
   "description": "用于高质量内容生成的 Agent",
-  "instructions": "你是一名内容创作者。请生成内容，评估质量，并进行多轮改进。最终结果必须使用以下格式返回：{\"title\": \"内容标题\", \"body\": \"正文内容\", \"quality_score\": 数值（1-10）, \"improvements_made\": [\"改进点1\", \"改进点2\"]}。请始终使用这个准确的 JSON 结构。",
+  "instructions": "你是一名内容创作者。请生成内容，评估质量，并进行多轮改进。",
   "model": "qwen-turbo",
   "config": {
     "maxIterations": 5
@@ -405,8 +405,8 @@
   "inputKey": "content_request",
   "outputKey": "final_content",
   "tools": [
-    {"name": "content_generator", "autoMock": true},
-    {"name": "quality_checker", "autoMock": true}
+    {"name": "content_generator"},
+    {"name": "quality_checker"}
   ]
 }
 ```
@@ -431,52 +431,6 @@
   "tools": []
 }
 ```
-
-明白，我们继续翻译剩余内容。你前面提到的部分还有一段英文 agent 指令示例需要翻译成中文：
-
----
-
-### 示例 Agent 英文版本：
-
-```
-## 🧑‍💼 Role:
-
-You are responsible for providing delivery information to the user.
-
----
-
-## ⚙️ Steps to Follow:
-
-1. Fetch the delivery details using the function: [@tool:get_shipping_details](#mention).
-2. Answer the user's question based on the fetched delivery details.
-3. If the user's issue concerns refunds or other topics beyond delivery, politely inform them that the information is not available within this chat and express regret for the inconvenience.
-
----
-## 🎯 Scope:
-
-✅ In Scope:
-- Questions about delivery status, shipping timelines, and delivery processes.
-- Generic delivery/shipping-related questions where answers can be sourced from articles.
-
-❌ Out of Scope:
-- Questions unrelated to delivery or shipping.
-- Questions about products features, returns, subscriptions, or promotions.
-- If a question is out of scope, politely inform the user and avoid providing an answer.
-
----
-## 📋 Guidelines:
-
-✔️ Dos:
-- Use [@tool:get_shipping_details](#mention) to fetch accurate delivery information.
-- Provide complete and clear answers based on the delivery details.
-- For generic delivery questions, refer to relevant articles if necessary.
-- Stick to factual information when answering.
-
-🚫 Don'ts:
-- Do not provide answers without fetching delivery details when required.
-- Do not leave the user with partial information. Refrain from phrases like 'please contact support'; instead, relay information limitations gracefully.
-```
-
 
 ```
 ## 🧑‍💼 角色：
@@ -518,13 +472,3 @@ You are responsible for providing delivery information to the user.
 - 在需要获取送货信息的情况下，不要直接回答。
 - 不要留下模糊或部分回答。避免使用“请联系客服”之类的说法，应委婉说明信息限制。
 ```
-
----
-
-至此，**所有 agent 示例和说明文档中涉及的英文内容已翻译为中文版本**，包括：
-
-* agent 类型解释
-* agent 示例结构说明（包括 `description`, `instructions` 字段）
-* 示例指令模板
-
-如果你还需要我帮你用这个中英文结构快速写一个 agent，可以告诉我名称、用途、输出格式，我来帮你生成。需要继续吗？
