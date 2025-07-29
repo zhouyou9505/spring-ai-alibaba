@@ -1,0 +1,405 @@
+{
+  "workflowId": "workflow-with-output-constraints",
+  "name": "输出约束工作流示例",
+  "description": "展示如何在 Agent 中定义输出约束，并用于条件路由。关键规则：当edge有condition时，fromAgentId agent必须在instructions中明确指定输出约束",
+  "version": "1.0.0",
+  "agents": [
+    {
+      "agentId": "reception_agent",
+      "name": "接待Agent",
+      "type": "llm",
+      "description": "简单对话接待，收集用户需求",
+      "instructions": "你是一个友好的接待员，请了解用户的需求并收集基本信息。提供清晰、简洁的回复。",
+      "model": "qwen-turbo",
+      "config": {
+        "maxIterations": 1
+      },
+      "inputKey": "user_message",
+      "outputKey": "reception_output",
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      },
+      "tools": []
+    },
+    {
+      "agentId": "request_classifier",
+      "name": "请求分类Agent",
+      "type": "llm",
+      "description": "将用户请求分类到特定类别",
+      "instructions": "你是一个请求分类器。分析用户请求并将其分类为以下类别之一：'technical'、'billing'、'general'、'complaint'。你必须只回复类别名称，不要其他内容。有效回复：'technical'、'billing'、'general'、'complaint'。",
+      "model": "qwen-turbo",
+      "config": {
+        "maxIterations": 1
+      },
+      "inputKey": "reception_output",
+      "outputKey": "request_category",
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      },
+      "tools": []
+    },
+    {
+      "agentId": "priority_classifier",
+      "name": "优先级分类Agent",
+      "type": "llm",
+      "description": "根据问题类型和紧急程度分类优先级",
+      "instructions": "你是一个优先级分类器。分析问题的紧急程度和影响范围，将优先级分类为：'low'、'medium'、'high'、'urgent'。你必须只回复优先级级别，不要其他内容。有效回复：'low'、'medium'、'high'、'urgent'。",
+      "model": "qwen-turbo",
+      "config": {
+        "maxIterations": 1
+      },
+      "inputKey": "user_request",
+      "outputKey": "priority_level",
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      },
+      "tools": []
+    },
+    {
+      "agentId": "technical_support",
+      "name": "技术支持Agent",
+      "type": "react",
+      "description": "处理技术问题",
+      "instructions": "你是一个技术支持专家。处理技术问题并提供解决方案。返回分析结果，格式如下：{\"problem_type\": \"technical_issue\", \"solution\": \"detailed_solution\", \"priority\": \"high/medium/low\"}。始终使用此确切的JSON结构。",
+      "model": "qwen-turbo",
+      "config": {
+        "maxIterations": 5
+      },
+      "inputKey": "user_request",
+      "outputKey": "technical_solution",
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      },
+      "tools": [
+        {
+          "name": "technical_diagnostic",
+          "autoMock": true
+        },
+        {
+          "name": "solution_generator",
+          "autoMock": true
+        }
+      ]
+    },
+    {
+      "agentId": "billing_support",
+      "name": "账单支持Agent",
+      "type": "react",
+      "description": "处理账单相关问题",
+      "instructions": "你是一个账单支持专家。处理账单和支付相关问题。返回处理结果，格式如下：{\"billing_issue\": \"issue_description\", \"resolution\": \"resolution_details\", \"amount\": \"amount_if_applicable\"}。始终使用此确切的JSON结构。",
+      "model": "qwen-turbo",
+      "config": {
+        "maxIterations": 5
+      },
+      "inputKey": "user_request",
+      "outputKey": "billing_solution",
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      },
+      "tools": [
+        {
+          "name": "billing_checker",
+          "autoMock": true
+        },
+        {
+          "name": "payment_processor",
+          "autoMock": true
+        }
+      ]
+    },
+    {
+      "agentId": "general_support",
+      "name": "一般支持Agent",
+      "type": "llm",
+      "description": "处理一般性问题",
+      "instructions": "你是一个一般支持专家。处理一般性问题和咨询。提供清晰、有帮助的回复。",
+      "model": "qwen-turbo",
+      "config": {
+        "maxIterations": 1
+      },
+      "inputKey": "user_request",
+      "outputKey": "general_response",
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      },
+      "tools": []
+    },
+    {
+      "agentId": "complaint_handler",
+      "name": "投诉处理Agent",
+      "type": "react_with_human",
+      "description": "处理投诉，需要人工干预",
+      "instructions": "你是一个投诉处理专家。处理用户投诉并在需要时暂停等待人工确认。对于最终决定，回复确切为 'escalated' 或 'resolved'。不要提供解释，只回复决定。有效回复：'escalated'、'resolved'。",
+      "model": "qwen-turbo",
+      "config": {
+        "maxIterations": 8
+      },
+      "inputKey": "user_request",
+      "outputKey": "complaint_resolution",
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      },
+      "tools": [
+        {
+          "name": "complaint_analyzer",
+          "autoMock": true
+        },
+        {
+          "name": "escalation_checker",
+          "autoMock": true
+        }
+      ]
+    },
+    {
+      "agentId": "urgent_handler",
+      "name": "紧急处理Agent",
+      "type": "react_with_human",
+      "description": "处理紧急问题，需要立即人工干预",
+      "instructions": "你是一个紧急问题处理专家。处理紧急问题并立即暂停等待人工确认。对于最终决定，回复确切为 'immediate_action' 或 'escalated_to_manager'。不要提供解释，只回复决定。有效回复：'immediate_action'、'escalated_to_manager'。",
+      "model": "qwen-turbo",
+      "config": {
+        "maxIterations": 3
+      },
+      "inputKey": "user_request",
+      "outputKey": "urgent_action",
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      },
+      "tools": [
+        {
+          "name": "emergency_analyzer",
+          "autoMock": true
+        },
+        {
+          "name": "escalation_checker",
+          "autoMock": true
+        }
+      ]
+    },
+    {
+      "agentId": "satisfaction_survey",
+      "name": "满意度调查Agent",
+      "type": "llm",
+      "description": "收集用户满意度反馈",
+      "instructions": "你是一个满意度调查专家。收集用户对服务的满意度反馈。回复满意度评分，格式如下：{\"satisfaction_score\": number 1-10, \"feedback\": \"user_feedback\", \"recommendations\": [\"rec1\", \"rec2\"]}。始终使用此确切的JSON结构。",
+      "model": "qwen-turbo",
+      "config": {
+        "maxIterations": 1
+      },
+      "inputKey": "service_result",
+      "outputKey": "satisfaction_result",
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      },
+      "tools": []
+    }
+  ],
+  "edges": [
+    {
+      "edgeId": "edge1",
+      "fromAgentId": "START",
+      "toAgentId": "reception_agent",
+      "label": "开始",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge2",
+      "fromAgentId": "reception_agent",
+      "toAgentId": "request_classifier",
+      "label": "分类请求",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge3",
+      "fromAgentId": "request_classifier",
+      "toAgentId": "priority_classifier",
+      "label": "优先级分类",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge4",
+      "fromAgentId": "request_classifier",
+      "toAgentId": "technical_support",
+      "label": "技术问题",
+      "condition": {"request_category": "technical"},
+      "edgeType": "CONDITIONAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge5",
+      "fromAgentId": "request_classifier",
+      "toAgentId": "billing_support",
+      "label": "账单问题",
+      "condition": {"request_category": "billing"},
+      "edgeType": "CONDITIONAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge6",
+      "fromAgentId": "request_classifier",
+      "toAgentId": "general_support",
+      "label": "一般问题",
+      "condition": {"request_category": "general"},
+      "edgeType": "CONDITIONAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge7",
+      "fromAgentId": "request_classifier",
+      "toAgentId": "complaint_handler",
+      "label": "投诉处理",
+      "condition": {"request_category": "complaint"},
+      "edgeType": "CONDITIONAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge8",
+      "fromAgentId": "priority_classifier",
+      "toAgentId": "urgent_handler",
+      "label": "紧急处理",
+      "condition": {"priority_level": "urgent"},
+      "edgeType": "CONDITIONAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge9",
+      "fromAgentId": "technical_support",
+      "toAgentId": "satisfaction_survey",
+      "label": "技术满意度调查",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge10",
+      "fromAgentId": "billing_support",
+      "toAgentId": "satisfaction_survey",
+      "label": "账单满意度调查",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge11",
+      "fromAgentId": "general_support",
+      "toAgentId": "satisfaction_survey",
+      "label": "一般满意度调查",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge12",
+      "fromAgentId": "complaint_handler",
+      "toAgentId": "satisfaction_survey",
+      "label": "投诉满意度调查",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge13",
+      "fromAgentId": "urgent_handler",
+      "toAgentId": "satisfaction_survey",
+      "label": "紧急满意度调查",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge14",
+      "fromAgentId": "satisfaction_survey",
+      "toAgentId": "END",
+      "label": "结束",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    }
+  ],
+  "globalConfig": {
+    "maxRetries": 3,
+    "timeout": 60000,
+    "enableLogging": true,
+    "enableMetrics": true,
+    "maxLoopIterations": 5,
+    "parallelExecution": false
+  },
+  "metadata": {
+    "createdAt": "2024-01-01T00:00:00Z",
+    "lastUpdatedAt": "2024-01-01T00:00:00Z",
+    "author": "AI Assistant",
+    "tags": ["demo", "output-constraints", "conditional-routing", "workflow"],
+    "category": "demonstration",
+    "customFields": {
+      "estimatedDuration": "10-20 minutes",
+      "complexity": "medium",
+      "requiredAgents": 9,
+      "agentTypes": ["llm", "react", "react_with_human"],
+      "features": ["Output Constraints", "Conditional Routing", "Human Intervention", "Structured Output", "Priority Classification"],
+      "outputConstraints": {
+        "request_classifier": "Exact values: technical, billing, general, complaint",
+        "priority_classifier": "Exact values: low, medium, high, urgent",
+        "technical_support": "JSON format with problem_type, solution, priority",
+        "billing_support": "JSON format with billing_issue, resolution, amount",
+        "complaint_handler": "Exact values: escalated, resolved",
+        "urgent_handler": "Exact values: immediate_action, escalated_to_manager",
+        "satisfaction_survey": "JSON format with satisfaction_score, feedback, recommendations"
+      },
+      "conditionalEdges": {
+        "request_classifier": "Routes to specific support agents based on classification",
+        "priority_classifier": "Routes urgent issues to immediate handler",
+        "complaint_handler": "May require human intervention for complex complaints",
+        "urgent_handler": "Requires immediate human intervention for urgent issues"
+      },
+      "validationRules": {
+        "rule1": "All agents with conditional edges must have output constraints in instructions",
+        "rule2": "Output values must exactly match condition values",
+        "rule3": "All possible condition values must be listed in agent instructions",
+        "rule4": "Structured output must specify exact JSON format"
+      },
+      "description": "展示输出约束和条件路由的工作流示例，确保Agent输出格式与条件边匹配。包含多层分类和优先级处理。"
+    }
+  }
+} 

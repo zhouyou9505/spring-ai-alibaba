@@ -24,9 +24,11 @@ public class WorkflowService {
 //    private final CodeGenerator codeGenerator;
     private final Map<String, WorkflowSchema> workflowStorage = new ConcurrentHashMap<>();
 
+    private ChatModel chatModel;
+
     public WorkflowService(ChatModel chatModel) {
+        this.chatModel = chatModel;
         this.flowRunner = new FlowRunner(chatModel);
-//        this.codeGenerator = new CodeGenerator();
     }
 
     /**
@@ -38,7 +40,7 @@ public class WorkflowService {
         workflowStorage.put(schema.getWorkflowId(), schema);
 
         // 注册到FlowRunner
-        flowRunner.registerWorkflow(schema);
+        flowRunner.registerWorkflow(schema, chatModel);
 
         return new WorkflowRegistrationResult(true, "工作流注册成功", schema.getWorkflowId());
     }
@@ -55,24 +57,6 @@ public class WorkflowService {
         }
     }
 
-    /**
-     * 生成工作流代码
-     */
-//    public CodeGenerationResult generateCode(String workflowId) {
-//        try {
-//            WorkflowSchema schema = workflowStorage.get(workflowId);
-//            if (schema == null) {
-//                return new CodeGenerationResult(false, "工作流未找到: " + workflowId, null, null);
-//            }
-//
-//            String generatedCode = codeGenerator.generateControllerCode(schema);
-//            String fileName = toCamelCase(schema.getName()) + "Controller.java";
-//
-//            return new CodeGenerationResult(true, "代码生成成功", generatedCode, fileName);
-//        } catch (Exception e) {
-//            return new CodeGenerationResult(false, "代码生成失败: " + e.getMessage(), null, null);
-//        }
-//    }
 
     /**
      * 获取工作流配置
@@ -134,83 +118,6 @@ public class WorkflowService {
         return stats;
     }
 
-    /**
-     * 创建示例工作流
-     */
-//    public WorkflowSchema createExampleWorkflow(String workflowId) {
-//        // 创建节点配置
-//        WorkflowSchema.NodeConfig inputNode = new WorkflowSchema.NodeConfig(
-//            "input_node", "simple", "输入处理节点",
-//            Map.of("inputKey", "input", "outputKey", "processed_input"),
-//            Map.of("input", "input"),
-//            Map.of("output", "processed_input")
-//        );
-//
-//        WorkflowSchema.NodeConfig llmNode = new WorkflowSchema.NodeConfig(
-//            "llm_node", "llm", "LLM处理节点",
-//            Map.of(
-//                "systemPrompt", "你是一个有用的AI助手",
-//                "userPrompt", "请处理以下输入：{input}",
-//                "outputKey", "llm_response"
-//            ),
-//            Map.of("input", "processed_input"),
-//            Map.of("response", "llm_response")
-//        );
-//
-//        WorkflowSchema.NodeConfig outputNode = new WorkflowSchema.NodeConfig(
-//            "output_node", "custom", "输出处理节点",
-//            Map.of("customLogic", "uppercase"),
-//            Map.of("input", "llm_response"),
-//            Map.of("output", "final_output")
-//        );
-//
-//        // 创建边配置
-//        WorkflowSchema.EdgeConfig edge1 = new WorkflowSchema.EdgeConfig(
-//            "edge1", "START", "input_node", null, null
-//        );
-//
-//        WorkflowSchema.EdgeConfig edge2 = new WorkflowSchema.EdgeConfig(
-//            "edge2", "input_node", "llm_node", null, null
-//        );
-//
-//        WorkflowSchema.EdgeConfig edge3 = new WorkflowSchema.EdgeConfig(
-//            "edge3", "llm_node", "output_node", null, null
-//        );
-//
-//        WorkflowSchema.EdgeConfig edge4 = new WorkflowSchema.EdgeConfig(
-//            "edge4", "output_node", "END", null, null
-//        );
-//
-//        return new WorkflowSchema(
-//            workflowId,
-//            "示例工作流",
-//            "这是一个示例工作流，演示了从输入处理到LLM调用再到输出处理的完整流程",
-//            List.of(inputNode, llmNode, outputNode),
-//            List.of(edge1, edge2, edge3, edge4),
-//            Map.of("maxRetries", 3, "timeout", 30000)
-//        );
-//    }
-
-    /**
-     * 转换为驼峰命名
-     */
-//    private String toCamelCase(String str) {
-//        if (str == null || str.trim().isEmpty()) {
-//            return "Default";
-//        }
-//
-//        String[] words = str.split("[\\s_-]+");
-//        StringBuilder result = new StringBuilder();
-//
-//        for (String word : words) {
-//            if (word.length() > 0) {
-//                result.append(Character.toUpperCase(word.charAt(0)))
-//                      .append(word.substring(1).toLowerCase());
-//            }
-//        }
-//
-//        return result.toString();
-//    }
 
     /**
      * 工作流注册结果

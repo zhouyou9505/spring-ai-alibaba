@@ -5,6 +5,7 @@ import com.alibaba.cloud.ai.graph.action.AsyncNodeAction;
 import com.alibaba.cloud.ai.graph.action.AsyncEdgeAction;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
+import com.alibaba.cloud.ai.graph.state.strategy.AppendStrategy;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import lombok.SneakyThrows;
 import org.slf4j.Logger;
@@ -33,11 +34,10 @@ public class FlowRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(FlowRunner.class);
 
-    private final ChatModel chatModel;
     private final NodeActionFactory nodeActionFactory;
     private final Map<String, CompiledGraph> compiledGraphs = new ConcurrentHashMap<>();
     private final Map<String, WorkflowSchema> workflowSchemas = new ConcurrentHashMap<>();
-
+    private ChatModel chatModel;
     public FlowRunner(ChatModel chatModel) {
         this.chatModel = chatModel;
         this.nodeActionFactory = new NodeActionFactory(chatModel);
@@ -46,14 +46,14 @@ public class FlowRunner {
     /**
      * 注册工作流
      */
-    public void registerWorkflow(WorkflowSchema schema) throws GraphStateException {
+    public void registerWorkflow(WorkflowSchema schema, ChatModel chatModel) throws GraphStateException {
         logger.info("注册工作流: {}", schema.getWorkflowId());
 
         // 存储工作流配置
         workflowSchemas.put(schema.getWorkflowId(), schema);
 
         // 构建编译图
-        CompiledGraph compiledGraph = buildGraph(schema);
+        CompiledGraph compiledGraph = buildGraph(schema,chatModel);
         compiledGraphs.put(schema.getWorkflowId(), compiledGraph);
 
         runWorkflow(schema.getWorkflowId(), Map.of("user_message","帮我翻译:你吃饭了吗"));
@@ -78,7 +78,7 @@ public class FlowRunner {
     @SneakyThrows
     public Map<String, Object> runWorkflow(WorkflowSchema workflowSchema, Map<String, Object> input) {
 
-        CompiledGraph compiledGraph = buildGraph(workflowSchema);
+        CompiledGraph compiledGraph = buildGraph(workflowSchema, chatModel);
 
         Optional<OverAllState> result = compiledGraph.invoke(input);
         return result.get().data();
@@ -88,7 +88,7 @@ public class FlowRunner {
     /**
      * 构建图形化工作流
      */
-    private CompiledGraph buildGraph(WorkflowSchema schema) throws GraphStateException {
+    private CompiledGraph buildGraph(WorkflowSchema schema, ChatModel chatModel) throws GraphStateException {
         logger.info("构建工作流图形: {}", schema.getWorkflowId());
 
         // 创建状态工厂
@@ -98,7 +98,7 @@ public class FlowRunner {
         StateGraph graph = new StateGraph(stateFactory);
 
         // 添加Agent节点
-        addAgents(graph, schema.getAgents());
+        addAgents(graph, schema.getAgents(),chatModel);
 
         // 添加边
         addEdges(graph, schema.getEdges());
@@ -119,6 +119,8 @@ public class FlowRunner {
     private OverAllStateFactory createStateFactory(WorkflowSchema schema) {
         return () -> {
             OverAllState state = new OverAllState();
+
+            state.registerKeyAndStrategy("user_request",new AppendStrategy());
 
             // 注册全局配置的键和策略
             if (schema.getGlobalConfig() != null) {
@@ -148,14 +150,14 @@ public class FlowRunner {
     /**
      * 添加Agent到图形
      */
-    private void addAgents(StateGraph graph, List<WorkflowSchema.AgentConfig> agents) {
+    private void addAgents(StateGraph graph, List<WorkflowSchema.AgentConfig> agents, ChatModel chatModel) {
         if (agents == null) {
             return;
         }
 
         for (WorkflowSchema.AgentConfig agentConfig : agents) {
             try {
-                NodeAction nodeAction = nodeActionFactory.createNodeAction(agentConfig);
+                NodeAction nodeAction = nodeActionFactory.createNodeAction(agentConfig, chatModel);
                 AsyncNodeAction asyncNodeAction = node_async(nodeAction);
 
                 graph.addNode(agentConfig.getAgentId(), asyncNodeAction);
@@ -236,7 +238,10 @@ public class FlowRunner {
                     // 添加所有条件边到映射中
                     for (WorkflowSchema.EdgeConfig edgeConfig : conditionalEdges) {
                         String toAgent = edgeConfig.getToAgentId();
-                        String conditionKey = edgeConfig.getCondition();
+                        Map<String, Object> condition = edgeConfig.getCondition();
+                        
+                        // 将条件转换为字符串键，用于映射
+                        String conditionKey = conditionToString(condition);
                         
                         if (END.contains(toAgent)) {
                             nextAgents.put(conditionKey, END);
@@ -280,17 +285,15 @@ public class FlowRunner {
         return edge_async(state -> {
             logger.debug("评估条件边，条件数量: {}", conditionalEdges.size());
 
-            // fixme 你需要把 用户问题、和需要返回的模型结果告诉模型，然后模型返回结果，然后根据结果进行判断
-
             // 按顺序评估每个条件
             for (WorkflowSchema.EdgeConfig edgeConfig : conditionalEdges) {
-                String condition = edgeConfig.getCondition();
+                Map<String, Object> condition = edgeConfig.getCondition();
                 logger.debug("评估条件: {}", condition);
                 
                 if (evaluateCondition(condition, state)) {
                     logger.debug("条件为真，返回: {}", condition);
-                    // 如果条件为真，返回该条件的键（完整的条件字符串）
-                    return condition;
+                    // 如果条件为真，返回该条件的字符串表示
+                    return conditionToString(condition);
                 }
             }
             
@@ -301,23 +304,17 @@ public class FlowRunner {
     }
     
     /**
-     * 评估条件 - 支持 JSON 对象格式的条件
+     * 评估条件 - 支持 Map 格式的条件
      */
-    private boolean evaluateCondition(String condition, OverAllState state) {
+    private boolean evaluateCondition(Map<String, Object> condition, OverAllState state) {
         try {
             logger.debug("开始评估条件: {}", condition);
-            // fixme 你需要把 用户问题、和需要返回的模型结果告诉模型，然后模型返回结果，然后根据结果进行判断
-
-            // 解析 JSON 对象格式的条件
-            // 格式: {"key": "value"}
-            Map<String, String> conditionMap = parseJsonToMap(condition);
-            logger.debug("解析的条件映射: {}", conditionMap);
-
-            if (!conditionMap.isEmpty()) {
+            
+            if (condition != null && !condition.isEmpty()) {
                 // 获取第一个条件
-                Map.Entry<String, String> entry = conditionMap.entrySet().iterator().next();
+                Map.Entry<String, Object> entry = condition.entrySet().iterator().next();
                 String key = entry.getKey();
-                String expectedValue = entry.getValue();
+                String expectedValue = entry.getValue().toString();
 
                 logger.debug("检查状态键: {}, 期望值: {}", key, expectedValue);
 
@@ -370,12 +367,11 @@ public class FlowRunner {
     }
 
     /**
-     * 评估简单条件
+     * 评估简单条件 - 兼容 String 格式（向后兼容）
      */
     private boolean evaluateSimpleCondition(String condition, OverAllState state) {
         try {
-            // 解析 JSON 对象格式的条件
-            // 格式: {"key": "value"}
+            // 如果是 JSON 字符串格式，解析为 Map
             if (condition.startsWith("{") && condition.endsWith("}")) {
                 Map<String, String> conditionMap = parseJsonToMap(condition);
                 if (!conditionMap.isEmpty()) {
@@ -399,6 +395,22 @@ public class FlowRunner {
         }
         
         return false;
+    }
+
+    /**
+     * 将 Map 条件转换为字符串键
+     */
+    private String conditionToString(Map<String, Object> condition) {
+        if (condition == null || condition.isEmpty()) {
+            return "default";
+        }
+        
+        // 获取第一个键值对，格式化为 "key:value"
+        Map.Entry<String, Object> entry = condition.entrySet().iterator().next();
+        String key = entry.getKey();
+        String value = entry.getValue().toString();
+        
+        return String.format("{\"%s\":\"%s\"}", key, value);
     }
 
     /**

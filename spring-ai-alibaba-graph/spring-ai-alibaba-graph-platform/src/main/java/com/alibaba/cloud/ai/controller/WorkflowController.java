@@ -31,6 +31,8 @@ public class WorkflowController {
 //        this.codeGenerator = new CodeGenerator();
     }
 
+    private ChatModel chatModel;
+
     /**
      * 注册工作流
      */
@@ -50,7 +52,7 @@ public class WorkflowController {
             }
             response.put("toolsRegistered", totalTools);
             
-            flowRunner.registerWorkflow(schema);
+            flowRunner.registerWorkflow(schema,chatModel);
             response.put("success", true);
             response.put("message", "工作流注册成功");
             response.put("workflowId", schema.getWorkflowId());

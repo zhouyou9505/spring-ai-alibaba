@@ -18,6 +18,7 @@ package com.alibaba.cloud.ai.graph.agent;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.ArrayList;
 
 import com.alibaba.cloud.ai.graph.*;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
@@ -84,11 +85,40 @@ public class ReactAgent {
 		this.graph = initGraph();
 	}
 
+	public ReactAgent(String name, ChatClient chatClient, List<ToolCallback> tools, int maxIterations, String instruction)
+			throws GraphStateException {
+		this.name = name;
+		this.llmNode = LlmNode.builder()
+			.chatClient(chatClient)
+			.systemPromptTemplate(instruction)
+			.messagesKey("messages")
+			.build();
+		this.toolNode = ToolNode.builder().toolCallbacks(tools).build();
+		this.max_iterations = maxIterations;
+		this.graph = initGraph();
+	}
+
 	public ReactAgent(String name, ChatClient chatClient, List<ToolCallback> tools, int maxIterations,
 			OverAllStateFactory overAllStateFactory, CompileConfig compileConfig,
 			Function<OverAllState, Boolean> shouldContinueFunc) throws GraphStateException {
 		this.name = name;
 		this.llmNode = LlmNode.builder().chatClient(chatClient).messagesKey("messages").build();
+		this.toolNode = ToolNode.builder().toolCallbacks(tools).build();
+		this.max_iterations = maxIterations;
+		this.overAllStateFactory = overAllStateFactory;
+		this.compileConfig = compileConfig;
+		this.graph = initGraph();
+	}
+
+	public ReactAgent(String name, ChatClient chatClient, List<ToolCallback> tools, int maxIterations, String instruction,
+			OverAllStateFactory overAllStateFactory, CompileConfig compileConfig,
+			Function<OverAllState, Boolean> shouldContinueFunc) throws GraphStateException {
+		this.name = name;
+		this.llmNode = LlmNode.builder()
+			.chatClient(chatClient)
+			.systemPromptTemplate(instruction)
+			.messagesKey("messages")
+			.build();
 		this.toolNode = ToolNode.builder().toolCallbacks(tools).build();
 		this.max_iterations = maxIterations;
 		this.overAllStateFactory = overAllStateFactory;
@@ -145,11 +175,11 @@ public class ReactAgent {
 		return this.compiledGraph;
 	}
 
-	public NodeAction asNodeAction(String inputKeyFromParent, String outputKeyToParent) {
+	public NodeAction asNodeAction(List<String> inputKeyFromParent, String outputKeyToParent) {
 		return new SubGraphNodeAdapter(inputKeyFromParent, outputKeyToParent, this.compiledGraph);
 	}
 
-	public AsyncNodeAction asAsyncNodeAction(String inputKeyFromParent, String outputKeyToParent) {
+	public AsyncNodeAction asAsyncNodeAction(List<String> inputKeyFromParent, String outputKeyToParent) {
 		if (this.compiledGraph == null) {
 			throw new IllegalStateException("ReactAgent not compiled yet");
 		}
@@ -262,6 +292,8 @@ public class ReactAgent {
 
 		private int maxIterations = 10;
 
+		private String instruction;
+
 		private CompileConfig compileConfig;
 
 		private OverAllStateFactory allStateFactory;
@@ -293,6 +325,11 @@ public class ReactAgent {
 			return this;
 		}
 
+		public Builder instruction(String instruction) {
+			this.instruction = instruction;
+			return this;
+		}
+
 		public Builder state(OverAllStateFactory overAllStateFactory) {
 			this.allStateFactory = overAllStateFactory;
 			return this;
@@ -314,8 +351,13 @@ public class ReactAgent {
 						shouldContinueFunc);
 			}
 			else if (tools != null) {
-				return new ReactAgent(name, chatClient, tools, maxIterations, allStateFactory, compileConfig,
-						shouldContinueFunc);
+				if (instruction != null) {
+					return new ReactAgent(name, chatClient, tools, maxIterations, instruction, allStateFactory, compileConfig,
+							shouldContinueFunc);
+				} else {
+					return new ReactAgent(name, chatClient, tools, maxIterations, allStateFactory, compileConfig,
+							shouldContinueFunc);
+				}
 			}
 			throw new IllegalArgumentException("Either tools or resolver must be provided");
 		}
@@ -324,13 +366,13 @@ public class ReactAgent {
 
 	public static class SubGraphNodeAdapter implements NodeAction {
 
-		private String inputKeyFromParent;
+		private List<String> inputKeyFromParent;
 
 		private String outputKeyToParent;
 
 		private CompiledGraph childGraph;
 
-		SubGraphNodeAdapter(String inputKeyFromParent, String outputKeyToParent, CompiledGraph childGraph) {
+		SubGraphNodeAdapter(List<String> inputKeyFromParent, String outputKeyToParent, CompiledGraph childGraph) {
 			this.inputKeyFromParent = inputKeyFromParent;
 			this.outputKeyToParent = outputKeyToParent;
 			this.childGraph = childGraph;
@@ -340,22 +382,26 @@ public class ReactAgent {
 		public Map<String, Object> apply(OverAllState parentState) throws Exception {
 
 			// prepare input for child graph
-			Object input = parentState.value(inputKeyFromParent).orElseThrow();
-			List<Message> messages;
+			List<Message> messages = new ArrayList<>();
 			
-			// 智能处理不同类型的输入
-			if (input instanceof org.springframework.ai.chat.messages.Message) {
-				// 如果输入已经是 Message 类型，直接使用
-				messages = List.of((org.springframework.ai.chat.messages.Message) input);
-			} else if (input instanceof List && !((List<?>) input).isEmpty() && 
-				((List<?>) input).get(0) instanceof org.springframework.ai.chat.messages.Message) {
-				// 如果输入是 List<Message>，直接使用
-				messages = (List<Message>) input;
-			} else {
-				// 其他类型，转换为字符串后创建 UserMessage
-				String inputString = input.toString();
-				Message message = new UserMessage(inputString);
-				messages = List.of(message);
+			// 遍历所有输入键，将对应的值添加到messages中
+			for (String inputKey : inputKeyFromParent) {
+				Object input = parentState.value(inputKey).orElseThrow();
+				
+				// 智能处理不同类型的输入
+				if (input instanceof org.springframework.ai.chat.messages.Message) {
+					// 如果输入已经是 Message 类型，直接添加
+					messages.add((org.springframework.ai.chat.messages.Message) input);
+				} else if (input instanceof List && !((List<?>) input).isEmpty() && 
+					((List<?>) input).get(0) instanceof org.springframework.ai.chat.messages.Message) {
+					// 如果输入是 List<Message>，添加所有元素
+					messages.addAll((List<Message>) input);
+				} else {
+					// 其他类型，转换为字符串后创建 UserMessage
+					String inputString = input.toString();
+					Message message = new UserMessage(inputString);
+					messages.add(message);
+				}
 			}
 
 			// invoke child graph

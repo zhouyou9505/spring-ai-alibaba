@@ -2,6 +2,7 @@ package com.alibaba.cloud.ai.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;
 
@@ -61,7 +62,8 @@ public class ToolFactory {
     /**
      * 注册默认工具
      */
-    public static void registerDefaultTools(ChatClient chatClient) {
+    public static void registerDefaultTools(ChatModel chatModel) {
+        ChatClient chatClient = ChatClient.builder(chatModel).build();
         setDefaultChatClient(chatClient);
         
         // 注册一些默认的模拟工具

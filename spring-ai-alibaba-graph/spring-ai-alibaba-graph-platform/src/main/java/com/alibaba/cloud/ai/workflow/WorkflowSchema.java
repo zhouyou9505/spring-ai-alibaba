@@ -284,7 +284,7 @@ public class WorkflowSchema {
         private String fromAgentId;
         private String toAgentId;
         private String label; // 边的标签，如"主题"、"是否通过?"
-        private String condition; // 条件表达式
+        private Map<String, Object> condition; // 条件表达式，使用JSON对象格式
         private EdgeType edgeType; // 边的类型
         private Map<String, Object> config;
 
@@ -292,7 +292,7 @@ public class WorkflowSchema {
         }
 
         public EdgeConfig(String edgeId, String fromAgentId, String toAgentId,
-                          String label, String condition, EdgeType edgeType,
+                          String label, Map<String, Object> condition, EdgeType edgeType,
                           Map<String, Object> config) {
             this.edgeId = edgeId;
             this.fromAgentId = fromAgentId;
@@ -336,11 +336,11 @@ public class WorkflowSchema {
             this.label = label;
         }
 
-        public String getCondition() {
+        public Map<String, Object> getCondition() {
             return condition;
         }
 
-        public void setCondition(String condition) {
+        public void setCondition(Map<String, Object> condition) {
             this.condition = condition;
         }
 

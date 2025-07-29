@@ -74,6 +74,161 @@ The system automatically detects and processes different input types:
 
 This provides flexibility while maintaining backward compatibility.
 
+## Section 1.6 : Output Constraints and Format Requirements
+
+When creating agents, you MUST specify output constraints and format requirements in the instructions. This is crucial for workflow integration and conditional routing.
+
+### Critical Rule: Conditional Edge Output Constraints
+
+**IMPORTANT**: When an edge has a `condition` value, the `fromAgentId` agent MUST have output constraints in its instructions that match the condition values.
+
+**Example**:
+```json
+{
+  "edges": [
+    {
+      "fromAgentId": "classification_agent",
+      "toAgentId": "technical_support",
+      "condition": {"request_category": "technical"}
+    }
+  ]
+}
+```
+
+**The `classification_agent` MUST have instructions like**:
+```json
+{
+  "agentId": "classification_agent",
+  "instructions": "You are a request classifier. Analyze the user request and classify it into exactly one of the following categories: 'technical', 'billing', 'general'. You MUST respond with ONLY the category name, nothing else. Valid responses are: 'technical', 'billing', 'general'."
+}
+```
+
+### Output Constraint Guidelines:
+
+1. **Classification Agents**: Must specify exact output values for conditional routing
+   ```json
+   {
+     "agentId": "classification_agent",
+     "name": "Classification Agent",
+     "type": "llm",
+     "description": "Classifies user requests into specific categories",
+     "instructions": "You are a classification agent. Analyze the user input and classify it into exactly one of the following categories: 'technical', 'billing', 'general'. You MUST respond with ONLY the category name, nothing else. Valid responses are: 'technical', 'billing', 'general'.",
+     "model": "qwen-turbo",
+     "config": {
+       "maxIterations": 1
+     },
+     "inputKey": "user_input",
+     "outputKey": "classification_result"
+   }
+   ```
+
+2. **Decision Agents**: Must specify boolean or specific decision values
+   ```json
+   {
+     "agentId": "approval_agent",
+     "name": "Approval Agent",
+     "type": "llm",
+     "description": "Makes approval decisions",
+     "instructions": "You are an approval agent. Review the request and respond with exactly 'approved' or 'rejected'. Do not provide explanations, only the decision. Valid responses: 'approved', 'rejected'.",
+     "model": "qwen-turbo",
+     "config": {
+       "maxIterations": 1
+     },
+     "inputKey": "request_details",
+     "outputKey": "approval_decision"
+   }
+   ```
+
+3. **Data Processing Agents**: Must specify output format
+   ```json
+   {
+     "agentId": "data_processor",
+     "name": "Data Processor",
+     "type": "react",
+     "description": "Processes data and returns structured results",
+     "instructions": "You are a data processor. Process the input data and return results in JSON format: {\"processed\": true, \"count\": number, \"summary\": \"text\"}. Always use this exact JSON structure.",
+     "model": "qwen-turbo",
+     "config": {
+       "maxIterations": 3
+     },
+     "inputKey": "raw_data",
+     "outputKey": "processed_data",
+     "tools": [
+       {"name": "data_analyzer", "autoMock": true}
+     ]
+   }
+   ```
+
+### Output Constraint Patterns:
+
+1. **Exact Value Matching**: For conditional routing
+   - Use: "You MUST respond with ONLY: 'value1', 'value2', 'value3'"
+   - Example: Classification, approval decisions
+   - **Required when**: Edge has condition like `{"key": "value"}`
+
+2. **Structured Format**: For data processing
+   - Use: "Return results in this exact format: {...}"
+   - Example: JSON responses, structured data
+   - **Required when**: Subsequent agents need to parse specific format
+
+3. **Boolean Decisions**: For simple yes/no routing
+   - Use: "Respond with exactly 'yes' or 'no'"
+   - Example: Simple decision points
+   - **Required when**: Edge has condition like `{"decision": "yes"}`
+
+4. **Range Values**: For numeric outputs
+   - Use: "Provide a number between 1-10"
+   - Example: Scoring, rating systems
+   - **Required when**: Edge has condition like `{"score": ">=5"}`
+
+### Conditional Edge Integration:
+
+When creating agents that feed into conditional edges, ensure the output values match the condition keys:
+
+```json
+{
+  "edges": [
+    {
+      "edgeId": "edge1",
+      "fromAgentId": "classification_agent",
+      "toAgentId": "technical_support",
+      "condition": {"classification_result": "technical"},
+      "edgeType": "CONDITIONAL"
+    },
+    {
+      "edgeId": "edge2", 
+      "fromAgentId": "classification_agent",
+      "toAgentId": "billing_support",
+      "condition": {"classification_result": "billing"},
+      "edgeType": "CONDITIONAL"
+    }
+  ]
+}
+```
+
+The classification agent's output must exactly match the condition values: "technical", "billing", etc.
+
+### Validation Checklist:
+
+When creating a workflow with conditional edges, verify:
+
+1. **For each edge with condition**:
+   - Does the `fromAgentId` agent have output constraints in instructions?
+   - Do the output values match the condition values exactly?
+   - Is the output format specified clearly?
+
+2. **For classification agents**:
+   - Are all possible condition values listed in instructions?
+   - Is the output format restricted to only those values?
+
+3. **For decision agents**:
+   - Are the decision values clearly specified?
+   - Do they match the condition values in edges?
+
+4. **For structured output agents**:
+   - Is the JSON format specified?
+   - Do the output fields match what condition edges expect?
+
 ## Section 2 : Editing an Existing Agent
 
 When the user asks you to edit an existing agent, you should follow the steps below:
@@ -97,7 +252,7 @@ When creating a new agent, strictly follow the format of this example agent. The
   "name": "Simple Chat Agent",
   "type": "llm",
   "description": "Simple conversation agent",
-  "instructions": "You are a helpful assistant. Answer user questions directly.",
+  "instructions": "You are a helpful assistant. Answer user questions directly. Provide clear, concise responses.",
   "model": "qwen-turbo",
   "config": {
     "maxIterations": 1
@@ -115,7 +270,7 @@ When creating a new agent, strictly follow the format of this example agent. The
   "name": "Data Analysis Agent",
   "type": "react",
   "description": "Agent for data analysis with tool usage",
-  "instructions": "You are a data analyst. Use available tools to analyze data and provide insights.",
+  "instructions": "You are a data analyst. Use available tools to analyze data and provide insights. Return your analysis in this format: {\"insights\": [\"insight1\", \"insight2\"], \"recommendations\": [\"rec1\", \"rec2\"], \"summary\": \"brief summary\"}. Always use this exact JSON structure.",
   "model": "qwen-turbo",
   "config": {
     "maxIterations": 8
@@ -136,7 +291,7 @@ When creating a new agent, strictly follow the format of this example agent. The
   "name": "Approval Agent",
   "type": "react_with_human",
   "description": "Agent requiring human approval",
-  "instructions": "You are an approval agent. Process requests and pause for human approval when needed.",
+  "instructions": "You are an approval agent. Process requests and pause for human approval when needed. For final decisions, respond with exactly 'approved' or 'rejected'. Do not provide explanations, only the decision. Valid responses: 'approved', 'rejected'.",
   "model": "qwen-turbo",
   "config": {
     "maxIterations": 12
@@ -156,7 +311,7 @@ When creating a new agent, strictly follow the format of this example agent. The
   "name": "Content Writer Agent",
   "type": "reflect",
   "description": "Agent for high-quality content generation",
-  "instructions": "You are a content writer. Generate content, evaluate quality, and improve iteratively.",
+  "instructions": "You are a content writer. Generate content, evaluate quality, and improve iteratively. Return your final content in this format: {\"title\": \"content title\", \"body\": \"content body\", \"quality_score\": number 1-10, \"improvements_made\": [\"improvement1\", \"improvement2\"]}. Always use this exact JSON structure.",
   "model": "qwen-turbo",
   "config": {
     "maxIterations": 5
@@ -167,6 +322,24 @@ When creating a new agent, strictly follow the format of this example agent. The
     {"name": "content_generator", "autoMock": true},
     {"name": "quality_checker", "autoMock": true}
   ]
+}
+```
+
+**Classification Agent Example (for conditional routing):**
+```json
+{
+  "agentId": "request_classifier",
+  "name": "Request Classifier",
+  "type": "llm",
+  "description": "Classifies user requests for routing",
+  "instructions": "You are a request classifier. Analyze the user request and classify it into exactly one of the following categories: 'technical', 'billing', 'general', 'complaint'. You MUST respond with ONLY the category name, nothing else. Valid responses are: 'technical', 'billing', 'general', 'complaint'.",
+  "model": "qwen-turbo",
+  "config": {
+    "maxIterations": 1
+  },
+  "inputKey": "user_request",
+  "outputKey": "request_category",
+  "tools": []
 }
 ```
 

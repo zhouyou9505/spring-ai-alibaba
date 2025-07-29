@@ -82,6 +82,11 @@ public class CopilotController {
 
         // 调用LLM生成新的工作流配置
         WorkflowSchema newSchema = generateWorkflowSchema(userRequest, currentSchema);
+        
+        // 循环检测，看newSchema是否符合要求，如果不符合要求，则重新生成
+        // while (!isValidWorkflowSchema(newSchema)) {
+        //     newSchema = greaterWorkflowSchema(newSchema);
+        // }
 
         // 保存或更新工作流
         String finalWorkflowId = newSchema.getWorkflowId();
@@ -106,6 +111,9 @@ public class CopilotController {
 
         return response;
     }
+
+
+
     
     /**
      * 使用LLM生成工作流配置
@@ -116,6 +124,10 @@ public class CopilotController {
         // 构建提示词
         StringBuilder promptBuilder = new StringBuilder();
         promptBuilder.append(copilotPrompt).append("\n\n");
+        
+        // 添加Agent编辑指南
+        promptBuilder.append("## Agent Creation and Editing Guide:\n");
+        promptBuilder.append(loadCopilotEditAgentGuide()).append("\n\n");
         
         // 添加WorkflowSchema JSON结构定义
         promptBuilder.append("## WorkflowSchema JSON Structure:\n");
@@ -184,27 +196,19 @@ public class CopilotController {
     /**
      * 加载Copilot提示词
      */
+    @SneakyThrows
     private String loadCopilotPrompt() {
-        try {
-            ClassPathResource resource = new ClassPathResource("prompts/copilot_multi_agent.md");
-            return new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            logger.warn("无法加载Copilot提示词文件，使用默认提示词", e);
-            return getDefaultCopilotPrompt();
-        }
+        ClassPathResource resource = new ClassPathResource("prompts/copilot_multi_agent.md");
+        return new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
     }
     
     /**
      * 加载WorkflowSchema JSON结构定义
      */
+    @SneakyThrows
     private String loadWorkflowSchemaDefinition() {
-        try {
-            ClassPathResource resource = new ClassPathResource("prompts/workflow_schema.json");
-            return new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            logger.warn("无法加载WorkflowSchema定义文件", e);
-            return "// WorkflowSchema JSON structure definition not available";
-        }
+        ClassPathResource resource = new ClassPathResource("prompts/workflow_schema.json");
+        return new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
     }
     
     /**
@@ -212,11 +216,24 @@ public class CopilotController {
      */
     private String loadBlogWritingWorkflowExample() {
         try {
-            ClassPathResource resource = new ClassPathResource("examples/multi-agent-types-demo.json");
+            ClassPathResource resource = new ClassPathResource("examples/workflow-with-output-constraints.json");
             return new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
             logger.warn("无法加载博客写作工作流示例文件", e);
             return "// Blog writing workflow example not available";
+        }
+    }
+    
+    /**
+     * 加载Agent编辑指南
+     */
+    private String loadCopilotEditAgentGuide() {
+        try {
+            ClassPathResource resource = new ClassPathResource("prompts/copilot_edit_agent.md");
+            return new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            logger.warn("无法加载Agent编辑指南文件", e);
+            return "// Agent editing guide not available";
         }
     }
     

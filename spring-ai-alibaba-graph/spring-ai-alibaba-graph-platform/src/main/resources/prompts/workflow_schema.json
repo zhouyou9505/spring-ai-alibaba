@@ -42,7 +42,7 @@
           },
           "instructions": {
             "type": "string",
-            "description": "Agent的具体指令"
+            "description": "Agent的具体指令。对于有输出约束的Agent，必须在instructions中明确指定输出格式和有效值。例如：分类Agent应指定'You MUST respond with ONLY: value1, value2, value3'；结构化输出Agent应指定'Return results in this exact format: {...}'"
           },
           "model": {
             "type": "string",
@@ -198,8 +198,17 @@
             "description": "边的标签"
           },
           "condition": {
-            "type": "string",
-            "description": "条件表达式"
+            "type": "object",
+            "description": "条件表达式，使用JSON对象格式。当edge有condition值时，fromAgentId对应的agent必须在instructions中明确指定输出约束，确保输出结果只能是condition中指定的值。例如：condition为{\"request_category\": \"technical\"}时，对应的agent必须输出\"technical\"",
+            "additionalProperties": {
+              "type": "string",
+              "description": "条件值，必须与对应agent的输出值精确匹配"
+            },
+            "examples": [
+              {"request_category": "technical"},
+              {"approval_decision": "approved"},
+              {"priority_level": "high"}
+            ]
           },
           "edgeType": {
             "type": "string",
@@ -462,31 +471,31 @@
       "llm": {
         "description": "简单LLM对话Agent",
         "特点": ["直接与LLM对话", "无工具调用", "适合简单问答"],
-        "适用场景": ["客服对话", "内容生成", "简单咨询"],
+        "适用场景": ["客服对话", "内容生成", "简单咨询", "分类决策"],
         "配置建议": {
           "tools": "通常为空或简单工具",
           "maxIterations": "1",
-          "instructions": "直接的用户指令"
+          "instructions": "直接的用户指令，对于分类Agent必须指定输出约束"
         }
       },
       "react": {
         "description": "ReAct模式Agent，支持工具调用",
         "特点": ["推理+行动循环", "支持工具调用", "记忆持久化", "流式输出"],
-        "适用场景": ["自动问答", "工具调用", "任务执行", "数据分析"],
+        "适用场景": ["自动问答", "工具调用", "任务执行", "数据分析", "结构化输出"],
         "配置建议": {
           "tools": "配置相关工具列表",
           "maxIterations": "5-10",
-          "instructions": "包含推理和行动步骤的指令"
+          "instructions": "包含推理和行动步骤的指令，对于结构化输出必须指定JSON格式"
         }
       },
       "react_with_human": {
         "description": "支持人工干预的ReAct Agent",
         "特点": ["ReAct基础上增加人工节点", "支持中断和恢复", "审批机制"],
-        "适用场景": ["医疗诊断建议", "金融审批", "法律文档生成", "合规审核"],
+        "适用场景": ["医疗诊断建议", "金融审批", "法律文档生成", "合规审核", "复杂决策"],
         "配置建议": {
           "tools": "配置相关工具",
           "maxIterations": "8-15",
-          "instructions": "包含人工确认点的指令"
+          "instructions": "包含人工确认点的指令，对于决策Agent必须指定输出约束"
         }
       },
       "reflect": {
@@ -496,7 +505,124 @@
         "配置建议": {
           "tools": "配置生成和评估工具",
           "maxIterations": "3-5",
-          "instructions": "包含反思和改进步骤的指令"
+          "instructions": "包含反思和改进步骤的指令，对于最终输出必须指定格式"
+        }
+      }
+    },
+    "outputConstraints": {
+      "description": "输出约束模式",
+      "exactValueMatching": {
+        "description": "精确值匹配，用于条件路由",
+        "pattern": "You MUST respond with ONLY: 'value1', 'value2', 'value3'",
+        "examples": ["分类Agent", "审批决策", "状态判断"],
+        "useCase": "当Agent输出需要与条件边的值精确匹配时使用"
+      },
+      "structuredFormat": {
+        "description": "结构化格式输出",
+        "pattern": "Return results in this exact format: {...}",
+        "examples": ["JSON响应", "结构化数据", "分析报告"],
+        "useCase": "当后续Agent需要解析特定格式数据时使用"
+      },
+      "booleanDecisions": {
+        "description": "布尔决策输出",
+        "pattern": "Respond with exactly 'yes' or 'no'",
+        "examples": ["简单决策点", "是/否判断", "通过/拒绝"],
+        "useCase": "用于简单的二元决策路由"
+      },
+      "rangeValues": {
+        "description": "数值范围输出",
+        "pattern": "Provide a number between 1-10",
+        "examples": ["评分系统", "优先级", "满意度"],
+        "useCase": "用于需要数值比较的条件路由"
+      }
+    },
+    "conditionalEdgeIntegration": {
+      "description": "条件边集成指南",
+      "requirements": [
+        "Agent的输出值必须与条件边的值精确匹配",
+        "分类Agent的输出必须与路由条件一致",
+        "结构化输出必须包含条件边需要的字段",
+        "决策Agent的输出必须与后续路由逻辑匹配"
+      ],
+      "criticalRule": {
+        "description": "关键规则：当edge有condition时，fromAgentId agent必须有输出约束",
+        "rule": "If edge.condition exists, then fromAgentId.instructions MUST contain output constraints matching condition values",
+        "example": {
+          "edge": {
+            "fromAgentId": "classification_agent",
+            "condition": {"request_category": "technical"}
+          },
+          "requiredInstructions": "You MUST respond with ONLY: 'technical', 'billing', 'general'. Valid responses are: 'technical', 'billing', 'general'."
+        }
+      },
+      "validationSteps": [
+        "检查每个有condition的edge",
+        "验证fromAgentId agent的instructions是否包含输出约束",
+        "确认输出值是否与condition值精确匹配",
+        "确保所有可能的condition值都在instructions中列出"
+      ],
+      "examples": {
+        "classificationRouting": {
+          "agentOutput": "technical",
+          "condition": {"request_category": "technical"},
+          "description": "分类Agent输出'technical'，条件边检查'request_category'为'technical'",
+          "requiredInstructions": "You MUST respond with ONLY: 'technical', 'billing', 'general'"
+        },
+        "approvalRouting": {
+          "agentOutput": "approved",
+          "condition": {"approval_decision": "approved"},
+          "description": "审批Agent输出'approved'，条件边检查'approval_decision'为'approved'",
+          "requiredInstructions": "Respond with exactly 'approved' or 'rejected'"
+        },
+        "priorityRouting": {
+          "agentOutput": "high",
+          "condition": {"priority_level": "high"},
+          "description": "优先级Agent输出'high'，条件边检查'priority_level'为'high'",
+          "requiredInstructions": "Classify priority as 'low', 'medium', or 'high' only"
+        }
+      }
+    },
+    "outputConstraintValidation": {
+      "description": "输出约束验证规则",
+      "rules": [
+        {
+          "name": "ConditionalEdgeConstraint",
+          "description": "条件边约束规则",
+          "condition": "edge.condition != null",
+          "requirement": "fromAgentId.instructions must contain output constraints",
+          "validation": "Check if instructions specify exact output values matching condition"
+        },
+        {
+          "name": "ValueMatching",
+          "description": "值匹配规则",
+          "condition": "edge.condition has specific values",
+          "requirement": "Agent output must match condition values exactly",
+          "validation": "Verify all condition values are listed in agent instructions"
+        },
+        {
+          "name": "FormatConsistency",
+          "description": "格式一致性规则",
+          "condition": "edge.condition expects structured data",
+          "requirement": "Agent must specify exact output format",
+          "validation": "Check if instructions specify JSON structure or format"
+        }
+      ],
+      "commonPatterns": {
+        "exactValue": {
+          "pattern": "You MUST respond with ONLY: 'value1', 'value2', 'value3'",
+          "useCase": "Classification agents with conditional routing"
+        },
+        "booleanDecision": {
+          "pattern": "Respond with exactly 'yes' or 'no'",
+          "useCase": "Simple decision points"
+        },
+        "structuredOutput": {
+          "pattern": "Return results in this exact format: {...}",
+          "useCase": "Data processing with structured output"
+        },
+        "rangeValue": {
+          "pattern": "Provide a number between 1-10",
+          "useCase": "Scoring or rating systems"
         }
       }
     }
