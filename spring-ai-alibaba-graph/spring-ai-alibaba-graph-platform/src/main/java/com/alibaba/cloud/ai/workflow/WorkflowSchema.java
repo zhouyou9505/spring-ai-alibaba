@@ -140,44 +140,7 @@ public class WorkflowSchema {
             this.tools = tools;
         }
 
-        /**
-         * 从字符串列表创建工具配置
-         */
-        public static List<ToolConfig> createToolsFromStrings(List<String> toolNames) {
-            if (toolNames == null) {
-                return List.of();
-            }
-            
-            return toolNames.stream()
-                .map(toolName -> new ToolConfig(toolName, "工具: " + toolName))
-                .toList();
-        }
 
-        /**
-         * 从 Map 列表创建工具配置
-         */
-        public static List<ToolConfig> createToolsFromMaps(List<Map<String, Object>> toolMaps) {
-            if (toolMaps == null) {
-                return List.of();
-            }
-            
-            return toolMaps.stream()
-                .map(ToolConfig::fromMap)
-                .toList();
-        }
-
-        /**
-         * 获取工具名称列表
-         */
-        public List<String> getToolNames() {
-            if (tools == null) {
-                return List.of();
-            }
-            
-            return tools.stream()
-                .map(ToolConfig::getName)
-                .toList();
-        }
     }
 
     /**
@@ -457,77 +420,4 @@ public class WorkflowSchema {
         }
     }
 
-    // 为了向后兼容，保留原有的NodeConfig和EdgeConfig
-    @Deprecated
-    public static class NodeConfig {
-        private String nodeId;
-        private String nodeType;
-        private String name;
-        private Map<String, Object> config;
-        private Map<String, Object> inputMapping;
-        private Map<String, Object> outputMapping;
-
-        public NodeConfig() {
-        }
-
-        public NodeConfig(String nodeId, String nodeType, String name,
-                          Map<String, Object> config, Map<String, Object> inputMapping,
-                          Map<String, Object> outputMapping) {
-            this.nodeId = nodeId;
-            this.nodeType = nodeType;
-            this.name = name;
-            this.config = config;
-            this.inputMapping = inputMapping;
-            this.outputMapping = outputMapping;
-        }
-
-        // Getters and Setters
-        public String getNodeId() {
-            return nodeId;
-        }
-
-        public void setNodeId(String nodeId) {
-            this.nodeId = nodeId;
-        }
-
-        public String getNodeType() {
-            return nodeType;
-        }
-
-        public void setNodeType(String nodeType) {
-            this.nodeType = nodeType;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public Map<String, Object> getConfig() {
-            return config;
-        }
-
-        public void setConfig(Map<String, Object> config) {
-            this.config = config;
-        }
-
-        public Map<String, Object> getInputMapping() {
-            return inputMapping;
-        }
-
-        public void setInputMapping(Map<String, Object> inputMapping) {
-            this.inputMapping = inputMapping;
-        }
-
-        public Map<String, Object> getOutputMapping() {
-            return outputMapping;
-        }
-
-        public void setOutputMapping(Map<String, Object> outputMapping) {
-            this.outputMapping = outputMapping;
-        }
-    }
 } 

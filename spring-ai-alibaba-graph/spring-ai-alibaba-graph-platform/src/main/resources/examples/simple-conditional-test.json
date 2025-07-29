@@ -1,0 +1,198 @@
+{
+  "workflowId": "simple-conditional-test",
+  "name": "简单条件边测试",
+  "description": "测试 JSON 格式的条件边功能",
+  "version": "1.0.0",
+  "agents": [
+    {
+      "agentId": "classifier_agent",
+      "name": "分类Agent",
+      "type": "llm",
+      "description": "根据输入进行分类",
+      "instructions": "你是一个分类专家，请根据输入内容将类型分类为：A、B、C。",
+      "model": "qwen-turbo",
+      "config": {
+        "inputKey": "input",
+        "outputKey": "type"
+      },
+      "inputMapping": {
+        "input": "user_input"
+      },
+      "outputMapping": {
+        "type": "type"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      },
+      "tools": []
+    },
+    {
+      "agentId": "agent_a",
+      "name": "Agent A",
+      "type": "llm",
+      "description": "处理类型A",
+      "instructions": "你负责处理类型A的内容。",
+      "model": "qwen-turbo",
+      "config": {
+        "inputKey": "input",
+        "outputKey": "result"
+      },
+      "inputMapping": {
+        "input": "user_input"
+      },
+      "outputMapping": {
+        "result": "result_a"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      },
+      "tools": []
+    },
+    {
+      "agentId": "agent_b",
+      "name": "Agent B",
+      "type": "llm",
+      "description": "处理类型B",
+      "instructions": "你负责处理类型B的内容。",
+      "model": "qwen-turbo",
+      "config": {
+        "inputKey": "input",
+        "outputKey": "result"
+      },
+      "inputMapping": {
+        "input": "user_input"
+      },
+      "outputMapping": {
+        "result": "result_b"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      },
+      "tools": []
+    },
+    {
+      "agentId": "agent_c",
+      "name": "Agent C",
+      "type": "llm",
+      "description": "处理类型C",
+      "instructions": "你负责处理类型C的内容。",
+      "model": "qwen-turbo",
+      "config": {
+        "inputKey": "input",
+        "outputKey": "result"
+      },
+      "inputMapping": {
+        "input": "user_input"
+      },
+      "outputMapping": {
+        "result": "result_c"
+      },
+      "options": {
+        "toggleAble": true,
+        "controlType": "auto",
+        "outputVisibility": "public",
+        "maxRetries": 3,
+        "timeout": 30000
+      },
+      "tools": []
+    }
+  ],
+  "edges": [
+    {
+      "edgeId": "edge1",
+      "fromAgentId": "START",
+      "toAgentId": "classifier_agent",
+      "label": "开始",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge2",
+      "fromAgentId": "classifier_agent",
+      "toAgentId": "agent_a",
+      "label": "类型A",
+      "condition": "{\"type\": \"A\"}",
+      "edgeType": "CONDITIONAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge3",
+      "fromAgentId": "classifier_agent",
+      "toAgentId": "agent_b",
+      "label": "类型B",
+      "condition": "{\"type\": \"B\"}",
+      "edgeType": "CONDITIONAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge4",
+      "fromAgentId": "classifier_agent",
+      "toAgentId": "agent_c",
+      "label": "类型C",
+      "condition": "{\"type\": \"C\"}",
+      "edgeType": "CONDITIONAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge5",
+      "fromAgentId": "agent_a",
+      "toAgentId": "END",
+      "label": "结束A",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge6",
+      "fromAgentId": "agent_b",
+      "toAgentId": "END",
+      "label": "结束B",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    },
+    {
+      "edgeId": "edge7",
+      "fromAgentId": "agent_c",
+      "toAgentId": "END",
+      "label": "结束C",
+      "condition": null,
+      "edgeType": "SEQUENTIAL",
+      "config": {}
+    }
+  ],
+  "globalConfig": {
+    "maxRetries": 3,
+    "timeout": 30000,
+    "enableLogging": true,
+    "enableMetrics": true,
+    "maxLoopIterations": 3,
+    "parallelExecution": false
+  },
+  "metadata": {
+    "createdAt": "2024-01-01T00:00:00Z",
+    "lastUpdatedAt": "2024-01-01T00:00:00Z",
+    "author": "AI Assistant",
+    "tags": ["test", "conditional-edges", "simple"],
+    "category": "testing",
+    "customFields": {
+      "estimatedDuration": "5-10 minutes",
+      "complexity": "simple",
+      "requiredAgents": 4,
+      "conditionalLogic": "JSON-based conditions"
+    }
+  }
+} 

@@ -1,0 +1,29 @@
+---
+title: Graph Diagram
+---
+flowchart TD
+    __START__((start))
+    __END__((stop))
+    reception_agent("reception_agent")
+    classification_agent("classification_agent")
+    data_agent("data_agent")
+    translation_agent("translation_agent")
+    analysis_agent("analysis_agent")
+    report_agent("report_agent")
+    condition1{"check state"}
+    __START__:::__START__ --> reception_agent:::reception_agent
+    analysis_agent:::analysis_agent --> report_agent:::report_agent
+    data_agent:::data_agent --> report_agent:::report_agent
+    reception_agent:::reception_agent --> classification_agent:::classification_agent
+    translation_agent:::translation_agent --> report_agent:::report_agent
+    classification_agent:::classification_agent -.-> condition1:::condition1
+    condition1:::condition1 -.->|problem_type == 'math'| data_agent:::data_agent
+%%	classification_agent:::classification_agent -.->|problem_type == 'math'| data_agent:::data_agent
+    condition1:::condition1 -.->|problem_type == 'analysis'| analysis_agent:::analysis_agent
+%%	classification_agent:::classification_agent -.->|problem_type == 'analysis'| analysis_agent:::analysis_agent
+    condition1:::condition1 -.->|problem_type == 'translation'| translation_agent:::translation_agent
+%%	classification_agent:::classification_agent -.->|problem_type == 'translation'| translation_agent:::translation_agent
+    report_agent:::report_agent --> __END__:::__END__
+
+    classDef ___START__ fill:black,stroke-width:1px,font-size:xx-small;
+    classDef ___END__ fill:black,stroke-width:1px,font-size:xx-small;

@@ -30,7 +30,7 @@ class CopilotControllerTest {
     @Test
     void testAdjustWorkflow_CreateNewSystem_Success() throws Exception {
         Map<String, Object> request = new HashMap<>();
-        request.put("userRequest", "创建一个智能客服系统，包含接待Agent、问题分类Agent、技术支持Agent和满意度调查Agent");
+        request.put("userRequest", "创建一个智能客服系统，包含接待Agent、问题分类Agent、数学的交给数据Agent，翻译的交给翻译Agent，数据分析的交给数据分析Agent，最后生成报告的Agent。");
 
         // 执行
         Map<String, Object> result = copilotController.adjustWorkflow(request);
@@ -41,7 +41,7 @@ class CopilotControllerTest {
         assertTrue(result.containsKey("success"));
         assertTrue(result.containsKey("message"));
 
-        workflowController.runWorkflow((String)result.get("workflowId"),Map.of("input", "测试输入数据"));
+//        workflowController.runWorkflow((String)result.get("workflowId"),Map.of("input", "今天天气"));
 
     }
 //

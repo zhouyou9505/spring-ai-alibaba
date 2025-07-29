@@ -70,10 +70,10 @@ public class WorkflowController {
      * 运行工作流
      */
     @PostMapping("/{workflowId}/run")
-    public Map<String, Object> runWorkflow(@PathVariable String workflowId, 
+    public Map<String, Object> runWorkflow(@PathVariable String workflowId,
                                           @RequestBody Map<String, Object> input) {
         Map<String, Object> response = new HashMap<>();
-        
+
         try {
             Map<String, Object> result = flowRunner.runWorkflow(workflowId, input);
             response.put("success", true);
@@ -84,7 +84,7 @@ public class WorkflowController {
             response.put("message", "工作流运行失败: " + e.getMessage());
             response.put("error", e.getClass().getSimpleName());
         }
-        
+
         return response;
     }
 

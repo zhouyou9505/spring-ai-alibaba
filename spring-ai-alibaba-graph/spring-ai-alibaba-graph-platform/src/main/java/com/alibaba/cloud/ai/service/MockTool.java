@@ -22,10 +22,9 @@ public class MockTool extends ToolConfig{
     private final ChatClient chatClient;
 
     public MockTool(ChatClient chatClient, ToolConfig toolConfig) {
+        super(toolConfig.getName(), toolConfig.getDescription(), toolConfig.getParameters());
         this.chatClient = chatClient;
-        this.name = toolConfig.getName();
-        this.description = toolConfig.getDescription();
-        this.parameters = toolConfig.getParameters();
+        this.autoMock = toolConfig.isAutoMock();
     }
 
     /**

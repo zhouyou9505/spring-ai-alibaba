@@ -17,6 +17,7 @@ public class ToolConfig {
     public String name;
     public String description;
     public Map<String, Object> parameters;
+    public boolean autoMock;
 
     public ToolConfig() {
     }
@@ -41,7 +42,7 @@ public class ToolConfig {
         config.setName((String) toolMap.get("name"));
         config.setDescription((String) toolMap.get("description"));
         config.setParameters((Map<String, Object>) toolMap.get("parameters"));
-        
+        config.setAutoMock((Boolean) toolMap.get("autoMock"));
         return config;
     }
 
@@ -52,7 +53,15 @@ public class ToolConfig {
         return Map.of(
             "name", name != null ? name : "",
             "description", description != null ? description : "",
-            "parameters", parameters != null ? parameters : Map.of()
+            "parameters", parameters != null ? parameters : Map.of(),
+            "autoMock", autoMock
         );
+    }
+
+    /**
+     * 检查是否为自动mock工具
+     */
+    public boolean isAutoMock() {
+        return autoMock;
     }
 }

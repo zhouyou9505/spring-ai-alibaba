@@ -31,11 +31,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class NodeActionFactory {
     
-    private final ChatModel chatModel;
     private final ChatClient chatClient;
     
     public NodeActionFactory(ChatModel chatModel) {
-        this.chatModel = chatModel;
         this.chatClient = ChatClient.builder(chatModel).build();
         
         // 注册默认工具
@@ -63,28 +61,16 @@ public class NodeActionFactory {
                     ". Supported types: llm, react, react_with_human, reflect");
         }
     }
-
+    
     /**
      * 创建 LLM Agent
      */
     private NodeAction createLLMAgent(WorkflowSchema.AgentConfig agentConfig) {
         // 获取配置参数
         String prompt = agentConfig.getInstructions();
-        List<ToolConfig> tools = agentConfig.getTools();
-        
+
         //转成toolcallback，过滤掉不存在的工具
-        List<ToolCallback> toolCallbacks = tools.stream()
-            .map(toolConfig -> {
-                String toolName = toolConfig.getName();
-                ToolCallback tool = ToolFactory.getTool(toolName);
-                if (tool == null) {
-                    // 如果工具不存在，创建 MockToolCallback
-                    return new MockToolCallback(chatClient, toolConfig);
-                }
-                return tool;
-            })
-            .filter(tool -> tool != null)
-            .collect(Collectors.toList());
+        List<ToolCallback> toolCallbacks = List.of(new MockToolCallback(chatClient, "mock_tool", "模拟工具"));
             
         try {
             // 获取输入输出键
@@ -100,7 +86,7 @@ public class NodeActionFactory {
                 .outputKey(outputKey)
                 .toolCallbacks(toolCallbacks)
                 .build();
-            
+        
             // 直接返回 LlmNode 作为 NodeAction
             return llmNode;
             
@@ -118,20 +104,19 @@ public class NodeActionFactory {
         int maxIterations = 10;
         List<ToolConfig> tools = agentConfig.getTools();
         
-        // 如果工具列表为空，自动添加 mock_tool
+        // 如果工具列表为空，抛出异常
         if (tools == null || tools.isEmpty()) {
-//            tools = List.of(createMockToolConfig("mock_tool"));
-//            log.info("Agent {} 没有配置工具，自动添加 mock_tool", agentConfig.getName());
             throw new RuntimeException("Agent " + agentConfig.getName() + " 没有配置工具");
         }
+        chatClient.prompt(prompt);
         
         //转成toolcallback，过滤掉不存在的工具
         List<ToolCallback> toolCallbacks = tools.stream()
             .map(toolConfig -> {
                 String toolName = toolConfig.getName();
                 ToolCallback tool = ToolFactory.getTool(toolName);
-                if (tool == null) {
-                    // 如果工具不存在，创建 MockToolCallback
+                if (tool == null && toolConfig.isAutoMock()) {
+                    // 如果工具不存在且配置为自动mock，创建 MockToolCallback
                     return new MockToolCallback(chatClient, toolConfig);
                 }
                 return tool;
@@ -169,12 +154,9 @@ public class NodeActionFactory {
         int maxIterations = 10;
         List<ToolConfig> tools = agentConfig.getTools();
         
-        // 如果工具列表为空，自动添加 mock_tool
+        // 如果工具列表为空，抛出异常
         if (tools == null || tools.isEmpty()) {
-//            tools = List.of(createMockToolConfig("mock_tool"));
-//            log.info("Agent {} 没有配置工具，自动添加 mock_tool", agentConfig.getName());
             throw new RuntimeException("Agent " + agentConfig.getName() + " 没有配置工具");
-
         }
         
         //转成toolcallback，过滤掉不存在的工具
@@ -182,8 +164,8 @@ public class NodeActionFactory {
             .map(toolConfig -> {
                 String toolName = toolConfig.getName();
                 ToolCallback tool = ToolFactory.getTool(toolName);
-                if (tool == null) {
-                    // 如果工具不存在，创建 MockToolCallback
+                if (tool == null && toolConfig.isAutoMock()) {
+                    // 如果工具不存在且配置为自动mock，创建 MockToolCallback
                     return new MockToolCallback(chatClient, toolConfig);
                 }
                 return tool;
@@ -209,9 +191,9 @@ public class NodeActionFactory {
             );
             
             // 将 NodeActionWithConfig 适配为 NodeAction
-            return new NodeAction() {
-                @Override
-                public Map<String, Object> apply(OverAllState state) throws Exception {
+        return new NodeAction() {
+            @Override
+            public Map<String, Object> apply(OverAllState state) throws Exception {
                     return nodeActionWithConfig.apply(state, null);
                 }
             };
@@ -229,12 +211,9 @@ public class NodeActionFactory {
         int maxIterations = 5;
         List<ToolConfig> tools = agentConfig.getTools();
         
-        // 如果工具列表为空，自动添加 mock_tool
+        // 如果工具列表为空，抛出异常
         if (tools == null || tools.isEmpty()) {
-//            tools = List.of(createMockToolConfig("mock_tool"));
-//            log.info("Agent {} 没有配置工具，自动添加 mock_tool", agentConfig.getName());
             throw new RuntimeException("Agent " + agentConfig.getName() + " 没有配置工具");
-
         }
         
         //转成toolcallback，过滤掉不存在的工具
@@ -242,8 +221,8 @@ public class NodeActionFactory {
             .map(toolConfig -> {
                 String toolName = toolConfig.getName();
                 ToolCallback tool = ToolFactory.getTool(toolName);
-                if (tool == null) {
-                    // 如果工具不存在，创建 MockToolCallback
+                if (tool == null && toolConfig.isAutoMock()) {
+                    // 如果工具不存在且配置为自动mock，创建 MockToolCallback
                     return new MockToolCallback(chatClient, toolConfig);
                 }
                 return tool;
@@ -316,30 +295,5 @@ public class NodeActionFactory {
         };
     }
     
-    /**
-     * 创建 MockTool 配置
-     */
-    private ToolConfig createMockToolConfig(String toolName) {
-        Map<String, Object> mockParameters = Map.of(
-            "type", "object",
-            "properties", Map.of(
-                "input", Map.of(
-                    "type", "string",
-                    "description", "输入参数"
-                ),
-                "mockType", Map.of(
-                    "type", "string",
-                    "description", "模拟类型",
-                    "enum", List.of("success", "error", "random")
-                )
-            ),
-            "required", List.of("input")
-        );
-        
-        return new ToolConfig(
-            toolName,
-            "这是一个模拟工具，用于测试和演示。当实际工具不可用时，提供模拟响应。",
-            mockParameters
-        );
-    }
+
 } 

@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import static com.alibaba.cloud.ai.graph.StateGraph.END;
 import static com.alibaba.cloud.ai.graph.StateGraph.START;
@@ -55,9 +56,7 @@ public class FlowRunner {
         CompiledGraph compiledGraph = buildGraph(schema);
         compiledGraphs.put(schema.getWorkflowId(), compiledGraph);
 
-
-        logger.info("工作流 {} 注册成功，包含 {} 个Agent", schema.getWorkflowId(),
-                schema.getAgents() != null ? schema.getAgents().size() : 0);
+        runWorkflow(schema.getWorkflowId(), Map.of("message","什么考试简单  可以抵税  计算机专业"));
     }
 
     /**
@@ -98,7 +97,7 @@ public class FlowRunner {
         CompiledGraph compiledGraph = graph.compile();
 
         // 打印图形表示（可选）
-        GraphRepresentation representation = compiledGraph.getGraph(GraphRepresentation.Type.PLANTUML);
+        GraphRepresentation representation = compiledGraph.getGraph(GraphRepresentation.Type.MERMAID);
         logger.info("工作流图形表示:\n{}", representation.content());
 
         return compiledGraph;
@@ -170,45 +169,85 @@ public class FlowRunner {
             return;
         }
 
-        for (WorkflowSchema.EdgeConfig edgeConfig : edges) {
-            String fromAgent = edgeConfig.getFromAgentId();
-            String toAgent = edgeConfig.getToAgentId();
-            String label = edgeConfig.getLabel();
-            WorkflowSchema.EdgeType edgeType = edgeConfig.getEdgeType();
+        // 按 fromAgentId 分组处理边
+        Map<String, List<WorkflowSchema.EdgeConfig>> edgesByFromAgent = edges.stream()
+            .collect(Collectors.groupingBy(WorkflowSchema.EdgeConfig::getFromAgentId));
+
+        for (Map.Entry<String, List<WorkflowSchema.EdgeConfig>> entry : edgesByFromAgent.entrySet()) {
+            String fromAgent = entry.getKey();
+            List<WorkflowSchema.EdgeConfig> agentEdges = entry.getValue();
 
             if (START.contains(fromAgent)) {
-                // 从开始节点出发的边
+                // 从开始节点出发的边，应该只有一个
+                if (agentEdges.size() > 1) {
+                    logger.warn("开始节点有多个边，只使用第一个: {}", fromAgent);
+                }
+                WorkflowSchema.EdgeConfig edgeConfig = agentEdges.get(0);
+                String toAgent = edgeConfig.getToAgentId();
+                String label = edgeConfig.getLabel();
                 graph.addEdge(START, toAgent);
                 logger.debug("添加开始边: {} -> {} ({})", fromAgent, toAgent, label);
-            } else if (END.contains(toAgent)) {
-                // 到结束节点的边
-                if (edgeConfig.getCondition() != null) {
-                    // 条件边
-                    AsyncEdgeAction edgeAction = createConditionEdgeAction(edgeConfig.getCondition());
-                    graph.addConditionalEdges(fromAgent, edgeAction,
-                            Map.of("true", END, "false", END));
-                } else {
-                    // 普通边
-                    graph.addEdge(fromAgent, END);
-                }
-                logger.debug("添加结束边: {} -> {} ({})", fromAgent, toAgent, label);
             } else {
-                // 普通Agent之间的边
-                if (edgeConfig.getCondition() != null) {
-                    // 条件边
-                    AsyncEdgeAction edgeAction = createConditionEdgeAction(edgeConfig.getCondition());
-                    Map<String, String> nextAgents = new HashMap<>();
-                    nextAgents.put("true", toAgent);
-                    nextAgents.put("false", toAgent); // 可以根据需要设置不同的false分支
+                // 处理普通Agent之间的边
+                List<WorkflowSchema.EdgeConfig> conditionalEdges = agentEdges.stream()
+                    .filter(edge -> edge.getCondition() != null)
+                    .collect(Collectors.toList());
+                
+                List<WorkflowSchema.EdgeConfig> normalEdges = agentEdges.stream()
+                    .filter(edge -> edge.getCondition() == null)
+                    .collect(Collectors.toList());
 
-                    graph.addConditionalEdges(fromAgent, edgeAction, nextAgents);
-                    logger.debug("添加条件边: {} -> {} (条件: {}, 类型: {})",
-                            fromAgent, toAgent, edgeConfig.getCondition(), edgeType);
+                if (conditionalEdges.isEmpty()) {
+                    // 只有普通边
+                    for (WorkflowSchema.EdgeConfig edgeConfig : normalEdges) {
+                        String toAgent = edgeConfig.getToAgentId();
+                        String label = edgeConfig.getLabel();
+                        WorkflowSchema.EdgeType edgeType = edgeConfig.getEdgeType();
+                        
+                        if (END.contains(toAgent)) {
+                            graph.addEdge(fromAgent, END);
+                            logger.debug("添加结束边: {} -> {} ({})", fromAgent, toAgent, label);
+                        } else {
+                            graph.addEdge(fromAgent, toAgent);
+                            logger.debug("添加普通边: {} -> {} ({}, 类型: {})",
+                                    fromAgent, toAgent, label, edgeType);
+                        }
+                    }
                 } else {
-                    // 普通边
-                    graph.addEdge(fromAgent, toAgent);
-                    logger.debug("添加普通边: {} -> {} ({}, 类型: {})",
-                            fromAgent, toAgent, label, edgeType);
+                    // 有条件边，需要合并处理
+                    if (normalEdges.size() > 0) {
+                        logger.warn("Agent {} 同时有条件边和普通边，优先处理条件边", fromAgent);
+                    }
+                    
+                    // 创建复合条件边动作
+                    AsyncEdgeAction compositeEdgeAction = createCompositeConditionEdgeAction(conditionalEdges);
+                    
+                    // 构建目标映射
+                    Map<String, String> nextAgents = new HashMap<>();
+                    for (WorkflowSchema.EdgeConfig edgeConfig : conditionalEdges) {
+                        String toAgent = edgeConfig.getToAgentId();
+                        String conditionKey = edgeConfig.getCondition();
+                        
+                        if (END.contains(toAgent)) {
+                            nextAgents.put(conditionKey, END);
+                        } else {
+                            nextAgents.put(conditionKey, toAgent);
+                        }
+                    }
+                    
+                    // 添加默认分支（如果有普通边）
+                    if (!normalEdges.isEmpty()) {
+                        String defaultToAgent = normalEdges.get(0).getToAgentId();
+                        if (END.contains(defaultToAgent)) {
+                            nextAgents.put("default", END);
+                        } else {
+                            nextAgents.put("default", defaultToAgent);
+                        }
+                    }
+                    
+                    graph.addConditionalEdges(fromAgent, compositeEdgeAction, nextAgents);
+                    logger.debug("添加复合条件边: {} -> {} (条件边数量: {})",
+                            fromAgent, nextAgents, conditionalEdges.size());
                 }
             }
         }
@@ -219,99 +258,144 @@ public class FlowRunner {
      */
     private AsyncEdgeAction createConditionEdgeAction(String condition) {
         return edge_async(state -> {
-            // 支持更复杂的条件评估
-            if (condition.contains("==")) {
-                String[] parts = condition.split("==");
-                String key = parts[0].trim();
-                String value = parts[1].trim().replace("\"", "");
-
-                boolean result = state.value(key)
-                        .map(val -> val.toString().equals(value))
-                        .orElse(false);
-
-                return result ? "true" : "false";
-            } else if (condition.contains("!=")) {
-                String[] parts = condition.split("!=");
-                String key = parts[0].trim();
-                String value = parts[1].trim().replace("\"", "");
-
-                boolean result = state.value(key)
-                        .map(val -> !val.toString().equals(value))
-                        .orElse(false);
-
-                return result ? "true" : "false";
-            } else if (condition.contains(">=")) {
-                String[] parts = condition.split(">=");
-                String key = parts[0].trim();
-                String value = parts[1].trim();
-
-                boolean result = state.value(key)
-                        .map(val -> {
-                            try {
-                                double valNum = Double.parseDouble(val.toString());
-                                double compareNum = Double.parseDouble(value);
-                                return valNum >= compareNum;
-                            } catch (NumberFormatException e) {
-                                return false;
-                            }
-                        })
-                        .orElse(false);
-
-                return result ? "true" : "false";
-            } else if (condition.contains(">")) {
-                String[] parts = condition.split(">");
-                String key = parts[0].trim();
-                String value = parts[1].trim();
-
-                boolean result = state.value(key)
-                        .map(val -> {
-                            try {
-                                double valNum = Double.parseDouble(val.toString());
-                                double compareNum = Double.parseDouble(value);
-                                return valNum > compareNum;
-                            } catch (NumberFormatException e) {
-                                return false;
-                            }
-                        })
-                        .orElse(false);
-
-                return result ? "true" : "false";
-            } else if (condition.contains("&&")) {
-                String[] parts = condition.split("&&");
-                boolean result = true;
-                for (String part : parts) {
-                    result = result && evaluateSimpleCondition(part.trim(), state);
+            try {
+                // 解析 JSON 对象格式的条件
+                // 格式: {"key": "value"}
+                if (condition.startsWith("{") && condition.endsWith("}")) {
+                    // 使用 JSON 解析
+                    Map<String, String> conditionMap = parseJsonToMap(condition);
+                    if (!conditionMap.isEmpty()) {
+                        // 获取第一个条件
+                        Map.Entry<String, String> entry = conditionMap.entrySet().iterator().next();
+                        String key = entry.getKey();
+                        String expectedValue = entry.getValue();
+                        
+                        // 从状态中获取值
+                        Optional<Object> stateValue = state.value(key);
+                        if (stateValue.isPresent()) {
+                            String actualValue = stateValue.get().toString();
+                            return actualValue.equals(expectedValue) ? "true" : "false";
+                        }
+                        return "false";
+                    }
                 }
-                return result ? "true" : "false";
-            } else if (condition.contains("||")) {
-                String[] parts = condition.split("\\|\\|");
-                boolean result = false;
-                for (String part : parts) {
-                    result = result || evaluateSimpleCondition(part.trim(), state);
-                }
-                return result ? "true" : "false";
+                
+            } catch (Exception e) {
+                logger.warn("解析条件失败: {}", condition, e);
             }
-
-            return "true"; // 默认返回true
+            
+            return "false"; // 默认返回 false
         });
+    }
+
+    /**
+     * 创建复合条件边动作
+     */
+    private AsyncEdgeAction createCompositeConditionEdgeAction(List<WorkflowSchema.EdgeConfig> conditionalEdges) {
+        return edge_async(state -> {
+            // 按顺序评估每个条件
+            for (WorkflowSchema.EdgeConfig edgeConfig : conditionalEdges) {
+                String condition = edgeConfig.getCondition();
+                if (evaluateCondition(condition, state)) {
+                    // 如果条件为真，返回该条件的键
+                    return condition;
+                }
+            }
+            // 如果所有条件都为假，返回默认分支
+            return "default";
+        });
+    }
+    
+    /**
+     * 评估条件 - 支持 JSON 对象格式的条件
+     */
+    private boolean evaluateCondition(String condition, OverAllState state) {
+        try {
+            // 解析 JSON 对象格式的条件
+            // 格式: {"key": "value"}
+            if (condition.startsWith("{") && condition.endsWith("}")) {
+                Map<String, String> conditionMap = parseJsonToMap(condition);
+                if (!conditionMap.isEmpty()) {
+                    // 获取第一个条件
+                    Map.Entry<String, String> entry = conditionMap.entrySet().iterator().next();
+                    String key = entry.getKey();
+                    String expectedValue = entry.getValue();
+                    
+                    // 从状态中获取值
+                    Optional<Object> stateValue = state.value(key);
+                    if (stateValue.isPresent()) {
+                        String actualValue = stateValue.get().toString();
+                        return actualValue.equals(expectedValue);
+                    }
+                    return false;
+                }
+            }
+            
+        } catch (Exception e) {
+            logger.warn("解析条件失败: {}", condition, e);
+        }
+        
+        // 默认返回 false
+        return false;
+    }
+    
+    /**
+     * 解析 JSON 字符串为 Map
+     */
+    private Map<String, String> parseJsonToMap(String json) {
+        try {
+            // 简单的 JSON 解析，处理 {"key": "value"} 格式
+            String content = json.substring(1, json.length() - 1);
+            Map<String, String> result = new HashMap<>();
+            
+            // 处理多个键值对的情况
+            String[] pairs = content.split(",");
+            for (String pair : pairs) {
+                String[] keyValue = pair.split(":");
+                if (keyValue.length == 2) {
+                    String key = keyValue[0].trim().replace("\"", "").replace("'", "");
+                    String value = keyValue[1].trim().replace("\"", "").replace("'", "");
+                    result.put(key, value);
+                }
+            }
+            
+            return result;
+        } catch (Exception e) {
+            logger.warn("JSON 解析失败: {}", json, e);
+            return new HashMap<>();
+        }
     }
 
     /**
      * 评估简单条件
      */
     private boolean evaluateSimpleCondition(String condition, OverAllState state) {
-        if (condition.contains("==")) {
-            String[] parts = condition.split("==");
-            String key = parts[0].trim();
-            String value = parts[1].trim().replace("\"", "");
-            return state.value(key).map(val -> val.toString().equals(value)).orElse(false);
-        } else if (condition.contains("!=")) {
-            String[] parts = condition.split("!=");
-            String key = parts[0].trim();
-            String value = parts[1].trim().replace("\"", "");
-            return state.value(key).map(val -> !val.toString().equals(value)).orElse(false);
+        try {
+            // 解析 JSON 对象格式的条件
+            // 格式: {"key": "value"}
+            if (condition.startsWith("{") && condition.endsWith("}")) {
+                Map<String, String> conditionMap = parseJsonToMap(condition);
+                if (!conditionMap.isEmpty()) {
+                    // 获取第一个条件
+                    Map.Entry<String, String> entry = conditionMap.entrySet().iterator().next();
+                    String key = entry.getKey();
+                    String expectedValue = entry.getValue();
+                    
+                    // 从状态中获取值
+                    Optional<Object> stateValue = state.value(key);
+                    if (stateValue.isPresent()) {
+                        String actualValue = stateValue.get().toString();
+                        return actualValue.equals(expectedValue);
+                    }
+                    return false;
+                }
+            }
+            
+        } catch (Exception e) {
+            logger.warn("解析条件失败: {}", condition, e);
         }
-        return true;
+        
+        return false;
     }
 
     /**
