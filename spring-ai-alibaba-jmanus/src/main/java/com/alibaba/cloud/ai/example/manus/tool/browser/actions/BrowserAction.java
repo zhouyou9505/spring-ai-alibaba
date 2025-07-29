@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2025 the original author or authors.
  *
@@ -17,10 +16,12 @@
 package com.alibaba.cloud.ai.example.manus.tool.browser.actions;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.alibaba.cloud.ai.example.manus.tool.browser.InteractiveElementRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,12 +51,31 @@ public abstract class BrowserAction {
 	}
 
 	/**
-	 * 模拟人类行为
-	 * @param element Playwright的ElementHandle实例
+	 * Get browser operation timeout configuration
+	 * @return Timeout in milliseconds, returns default value of 30 seconds if not
+	 * configured
+	 */
+	protected Integer getBrowserTimeoutMs() {
+		Integer timeout = getBrowserUseTool().getManusProperties().getBrowserRequestTimeout();
+		return (timeout != null ? timeout : 30) * 1000; // Convert to milliseconds
+	}
+
+	/**
+	 * Get browser operation timeout configuration
+	 * @return Timeout in seconds, returns default value of 30 seconds if not configured
+	 */
+	protected Integer getBrowserTimeoutSec() {
+		Integer timeout = getBrowserUseTool().getManusProperties().getBrowserRequestTimeout();
+		return timeout != null ? timeout : 30; // Default timeout is 30 seconds
+	}
+
+	/**
+	 * Simulate human behavior
+	 * @param element Playwright ElementHandle instance
 	 */
 	protected void simulateHumanBehavior(ElementHandle element) {
 		try {
-			// 添加随机延迟
+			// Add random delay
 			Thread.sleep(new Random().nextInt(500) + 200);
 		}
 		catch (InterruptedException e) {
@@ -64,7 +84,7 @@ public abstract class BrowserAction {
 	}
 
 	/**
-	 * 获取 DriverWrapper 实例
+	 * Get DriverWrapper instance
 	 * @return DriverWrapper
 	 */
 	protected DriverWrapper getDriverWrapper() {
@@ -73,8 +93,8 @@ public abstract class BrowserAction {
 	}
 
 	/**
-	 * 获取当前页面 Page 实例
-	 * @return 当前 Playwright 的 Page 实例
+	 * Get current page Page instance
+	 * @return Current Playwright Page instance
 	 */
 	protected Page getCurrentPage() {
 		DriverWrapper driverWrapper = getDriverWrapper();
@@ -82,9 +102,21 @@ public abstract class BrowserAction {
 	}
 
 	/**
-	 * 获取可交互元素
-	 * @param page Playwright的Page实例
-	 * @return 可交互元素列表
+	 * Retrieve the interaction elements of the specified index
+	 * @param index element index
+	 * @return InteractiveElement
+	 */
+	protected InteractiveElement getInteractiveElement(int index) {
+		DriverWrapper driverWrapper = getDriverWrapper();
+		InteractiveElementRegistry interactiveElementRegistry = driverWrapper.getInteractiveElementRegistry();
+		Optional<InteractiveElement> elementOpt = interactiveElementRegistry.getElementById(index);
+		return elementOpt.orElse(null);
+	}
+
+	/**
+	 * Get interactive elements
+	 * @param page Playwright Page instance
+	 * @return List of interactive elements
 	 */
 	protected List<InteractiveElement> getInteractiveElements(Page page) {
 		DriverWrapper driverWrapper = browserUseTool.getDriver();
@@ -99,8 +131,8 @@ public abstract class BrowserAction {
 		Set<String> urlsBeforeClick = pagesBeforeClick.stream().map(Page::url).collect(Collectors.toSet());
 
 		try {
-			Integer timeout = getBrowserUseTool().getManusProperties().getBrowserRequestTimeout();
-			Page.WaitForPopupOptions popupOptions = new Page.WaitForPopupOptions().setTimeout(timeout);
+			Integer timeout = getBrowserTimeoutMs();
+			Page.WaitForPopupOptions popupOptions = new Page.WaitForPopupOptions().setTimeout(Math.min(timeout, 3000));
 
 			newPageFromPopup = pageToClickOn.waitForPopup(popupOptions, clickLambda);
 

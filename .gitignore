@@ -43,6 +43,8 @@ spring-ai-alibaba-examples/playground-flight-booking/src/main/bundles/
 **/venv/*
 **/spring-ai-alibaba-jmanus/h2-data/*
 **/playwright/*
+spring-ai-alibaba-jmanus/ui-vue3/pnpm-lock.yaml
+
 
 # windows os
 /extensions/
@@ -51,3 +53,11 @@ spring-ai-alibaba-examples/playground-flight-booking/src/main/bundles/
 # checkstyle report files
 **/checkstyle-report.xml
 **/logs/*
+
+# SpecStory files - ignore entire .specstory directory
+.specstory/
+.specstory/.what-is-this.md
+.specstory/history/*
+
+# MCP configuration files
+modified_mcp_config.json

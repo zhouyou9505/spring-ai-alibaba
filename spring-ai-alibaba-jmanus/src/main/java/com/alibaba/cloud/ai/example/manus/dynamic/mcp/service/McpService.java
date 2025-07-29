@@ -15,299 +15,332 @@
  */
 package com.alibaba.cloud.ai.example.manus.dynamic.mcp.service;
 
-import com.alibaba.cloud.ai.example.manus.dynamic.mcp.model.po.McpConfigEntity;
-import com.alibaba.cloud.ai.example.manus.dynamic.mcp.model.po.McpConfigType;
-import com.alibaba.cloud.ai.example.manus.dynamic.mcp.model.vo.McpConfigRequestVO;
-import com.alibaba.cloud.ai.example.manus.dynamic.mcp.model.vo.McpServerConfig;
-import com.alibaba.cloud.ai.example.manus.dynamic.mcp.model.vo.McpServersConfig;
-import com.alibaba.cloud.ai.example.manus.dynamic.mcp.model.vo.McpServiceEntity;
-import com.alibaba.cloud.ai.example.manus.dynamic.mcp.repository.McpConfigRepository;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.cache.RemovalListener;
-import io.modelcontextprotocol.client.McpAsyncClient;
-import io.modelcontextprotocol.client.McpClient;
-import io.modelcontextprotocol.client.transport.ServerParameters;
-import io.modelcontextprotocol.client.transport.StdioClientTransport;
-import io.modelcontextprotocol.client.transport.WebFluxSseClientTransport;
-import io.modelcontextprotocol.spec.McpClientTransport;
-import io.modelcontextprotocol.spec.McpSchema;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.ai.mcp.AsyncMcpToolCallbackProvider;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import com.alibaba.cloud.ai.example.manus.dynamic.mcp.model.po.McpConfigEntity;
+import com.alibaba.cloud.ai.example.manus.dynamic.mcp.model.po.McpConfigStatus;
+import com.alibaba.cloud.ai.example.manus.dynamic.mcp.model.po.McpConfigType;
+import com.alibaba.cloud.ai.example.manus.dynamic.mcp.model.vo.McpServerConfig;
+import com.alibaba.cloud.ai.example.manus.dynamic.mcp.model.vo.McpServiceEntity;
+import com.alibaba.cloud.ai.example.manus.dynamic.mcp.model.vo.McpServerRequestVO;
+import com.alibaba.cloud.ai.example.manus.dynamic.mcp.repository.McpConfigRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+/**
+ * MCP服务主类（重构后） 负责协调各个组件，提供统一的业务接口
+ */
 @Component
-public class McpService {
+public class McpService implements IMcpService {
 
 	private static final Logger logger = LoggerFactory.getLogger(McpService.class);
 
-	@Autowired
-	private McpConfigRepository mcpConfigRepository;
+	private final McpConfigRepository mcpConfigRepository;
 
-	private final LoadingCache<String, Map<String, McpServiceEntity>> toolCallbackMapCache = CacheBuilder.newBuilder()
-		.expireAfterAccess(10, TimeUnit.MINUTES)
-		.removalListener((RemovalListener<String, Map<String, McpServiceEntity>>) notification -> {
-			Map<String, McpServiceEntity> mcpServiceEntityMap = notification.getValue();
-			if (mcpServiceEntityMap == null) {
-				return;
-			}
-			for (McpServiceEntity mcpServiceEntity : mcpServiceEntityMap.values()) {
-				try {
-					mcpServiceEntity.getMcpAsyncClient().close();
-				}
-				catch (Throwable t) {
-					logger.error("Failed to close MCP client", t);
-				}
-			}
-		})
-		.build(new CacheLoader<>() {
-			@Override
-			public Map<String, McpServiceEntity> load(String key) throws Exception {
-				return loadMcpServices(mcpConfigRepository.findAll());
-			}
-		});
+	private final McpConfigValidator configValidator;
 
-	private Map<String, McpServiceEntity> loadMcpServices(List<McpConfigEntity> mcpConfigEntities) throws IOException {
-		Map<String, McpServiceEntity> toolCallbackMap = new ConcurrentHashMap<>();
-		for (McpConfigEntity mcpConfigEntity : mcpConfigEntities) {
-			if (mcpConfigEntity.getConnectionType() == null) {
-				throw new IOException("Connection type is required");
-			}
-			McpConfigType type = mcpConfigEntity.getConnectionType();
-			String serverName = mcpConfigEntity.getMcpServerName();
-			switch (type) {
+	private final McpCacheManager cacheManager;
 
-				case SSE -> {
-					McpClientTransport transport = null;
-					try (JsonParser jsonParser = new ObjectMapper()
-						.createParser(mcpConfigEntity.getConnectionConfig())) {
-						McpServerConfig mcpServerConfig = jsonParser.readValueAs(McpServerConfig.class);
-						if (mcpServerConfig.getUrl() == null || mcpServerConfig.getUrl().isEmpty()) {
-							throw new IOException("Invalid MCP server URL");
-						}
+	private final ObjectMapper objectMapper;
 
-						// 获取URL和base_uri
-						String url = mcpServerConfig.getUrl();
-
-						// 移除末尾的"/sse"部分
-						if (url.endsWith("/sse")) {
-							url = url.substring(0, url.length() - 4); // 移除末尾的"/sse"
-						}
-						// 移除末尾的斜杠，避免与baseUrl组合时产生路径问题
-						else if (url.endsWith("/")) {
-							url = url.substring(0, url.length() - 1);
-						}
-
-						logger.info("Connecting to SSE endpoint: {}", url);
-
-						// 创建WebClient并添加必要的请求头
-						WebClient.Builder webClient = WebClient.builder()
-							.baseUrl(url)
-							.defaultHeader("Accept", "text/event-stream")
-							.defaultHeader("Content-Type", "application/json");
-
-						transport = new WebFluxSseClientTransport(webClient, new ObjectMapper());
-						McpServiceEntity mcpServiceEntity = configureMcpTransport(serverName, transport);
-						if (mcpServiceEntity != null) {
-							toolCallbackMap.put(serverName, mcpServiceEntity);
-						}
-					}
-				}
-				case STUDIO -> {
-					McpClientTransport transport = null;
-					try (JsonParser jsonParser = new ObjectMapper()
-						.createParser(mcpConfigEntity.getConnectionConfig())) {
-						McpServerConfig mcpServerConfig = jsonParser.readValueAs(McpServerConfig.class);
-
-						// 提取命令参数
-						String command = mcpServerConfig.getCommand();
-						List<String> args = mcpServerConfig.getArgs();
-						Map<String, String> env = mcpServerConfig.getEnv();
-
-						// 检查命令是否存在
-						if (command == null || command.isEmpty()) {
-							throw new IOException(
-									"Missing required 'command' field in server configuration for " + serverName);
-						}
-
-						// 使用Builder模式创建ServerParameters实例
-						ServerParameters.Builder builder = ServerParameters.builder(command);
-
-						// 添加参数
-						if (args != null && !args.isEmpty()) {
-							builder.args(args);
-						}
-
-						// 添加环境变量
-						if (env != null && !env.isEmpty()) {
-							builder.env(env);
-						}
-
-						// 构建ServerParameters实例
-						ServerParameters serverParameters = builder.build();
-						transport = new StdioClientTransport(serverParameters, new ObjectMapper());
-
-						// 配置MCP客户端
-						McpServiceEntity mcpServiceEntity = configureMcpTransport(serverName, transport);
-						if (mcpServiceEntity != null) {
-							toolCallbackMap.put(serverName, mcpServiceEntity);
-						}
-						logger.info("STUDIO MCP Client configured for server: {}", serverName);
-					}
-					catch (Exception e) {
-						logger.error("Error creating STUDIO transport: ", e);
-						throw new IOException("Failed to create StdioClientTransport: " + e.getMessage(), e);
-					}
-				}
-				case STREAMING -> {
-					// 处理STREAMING类型的连接
-					// 注意：此处需要实现STREAMING类型的处理逻辑
-					logger.warn("STREAMING connection type is not fully implemented yet");
-					throw new UnsupportedOperationException("STREAMING connection type is not supported yet");
-				}
-			}
-		}
-		return toolCallbackMap;
+	public McpService(McpConfigRepository mcpConfigRepository, McpConfigValidator configValidator,
+			McpCacheManager cacheManager, ObjectMapper objectMapper) {
+		this.mcpConfigRepository = mcpConfigRepository;
+		this.configValidator = configValidator;
+		this.cacheManager = cacheManager;
+		this.objectMapper = objectMapper;
 	}
 
-	private McpServiceEntity configureMcpTransport(String mcpServerName, McpClientTransport transport)
-			throws IOException {
-		if (transport != null) {
-			McpAsyncClient mcpAsyncClient = McpClient.async(transport)
-				.clientInfo(new McpSchema.Implementation(mcpServerName, "1.0.0"))
-				.build();
-			try {
-				mcpAsyncClient.initialize().block();
-				logger.info("MCP transport configured successfully for: {}", mcpServerName);
-
-				AsyncMcpToolCallbackProvider callbackProvider = new AsyncMcpToolCallbackProvider(mcpAsyncClient);
-				return new McpServiceEntity(mcpAsyncClient, callbackProvider, mcpServerName);
-			}
-			catch (Exception e) {
-				logger.error("Failed to initialize MCP transport for {}", mcpServerName, e);
-				return null;
-			}
-		}
-		return null;
-	}
-
-	public void addMcpServer(McpConfigRequestVO mcpConfig) throws IOException {
-		insertOrUpdateMcpRepo(mcpConfig);
-		toolCallbackMapCache.invalidateAll();
-	}
-
-	public List<McpConfigEntity> insertOrUpdateMcpRepo(McpConfigRequestVO mcpConfigVO) throws IOException {
+	/**
+	 * 批量保存MCP服务器配置
+	 * @param configJson MCP配置JSON字符串
+	 * @return 配置实体列表
+	 * @throws IOException IO异常
+	 */
+	@Override
+	public List<McpConfigEntity> saveMcpServers(String configJson) throws IOException {
 		List<McpConfigEntity> entityList = new ArrayList<>();
-		try (JsonParser jsonParser = new ObjectMapper().createParser(mcpConfigVO.getConfigJson())) {
-			McpServersConfig mcpServerConfig = jsonParser.readValueAs(McpServersConfig.class);
-			String type = mcpConfigVO.getConnectionType();
-			McpConfigType mcpConfigType = McpConfigType.valueOf(type);
-			if (McpConfigType.STUDIO.equals(mcpConfigType)) {
-				// STUDIO类型的连接需要特殊处理
-				mcpServerConfig.getMcpServers().forEach((name, config) -> {
-					if (config.getCommand() == null || config.getCommand().isEmpty()) {
-						throw new IllegalArgumentException(
-								"Missing required 'command' field in server configuration for " + name);
-					}
-					if (config.getUrl() != null && !config.getUrl().isEmpty()) {
-						throw new IllegalArgumentException(
-								"STUDIO type should not have 'url' field in server configuration for " + name);
-					}
+
+		JsonNode jsonNode = objectMapper.readTree(configJson);
+
+		// 检查是否包含mcpServers字段
+		if (!jsonNode.has("mcpServers")) {
+			throw new IllegalArgumentException("Missing 'mcpServers' field in JSON configuration");
+		}
+
+		JsonNode mcpServersNode = jsonNode.get("mcpServers");
+		if (!mcpServersNode.isObject()) {
+			throw new IllegalArgumentException("'mcpServers' must be an object");
+		}
+
+		// 直接解析为Map<String, McpServerConfig>
+		Map<String, McpServerConfig> mcpServers = objectMapper.convertValue(mcpServersNode,
+				new TypeReference<Map<String, McpServerConfig>>() {
 				});
-			}
-			else if (McpConfigType.SSE.equals(mcpConfigType)) {
-				// SSE类型的连接需要特殊处理
-				mcpServerConfig.getMcpServers().forEach((name, config) -> {
-					if (config.getUrl() == null || config.getUrl().isEmpty()) {
-						throw new IllegalArgumentException(
-								"Missing required 'url' field in server configuration for " + name);
-					}
-					if (config.getCommand() != null && !config.getCommand().isEmpty()) {
-						throw new IllegalArgumentException(
-								"SSE type should not have 'command' field in server configuration for " + name);
-					}
-				});
-			}
-			else if (McpConfigType.STREAMING.equals(mcpConfigType)) {
-				throw new UnsupportedOperationException("STREAMING connection type is not supported yet");
-			}
 
-			// 迭代处理每个MCP服务器配置
-			for (Map.Entry<String, McpServerConfig> entry : mcpServerConfig.getMcpServers().entrySet()) {
-				String serverName = entry.getKey();
-				McpServerConfig serverConfig = entry.getValue();
+		// 遍历每个MCP服务器配置
+		for (Map.Entry<String, McpServerConfig> entry : mcpServers.entrySet()) {
+			String serverName = entry.getKey();
+			McpServerConfig serverConfig = entry.getValue();
 
-				// 使用ServerConfig的toJson方法将配置转换为JSON字符串
-				String configJson = serverConfig.toJson();
+			// 验证服务器配置
+			configValidator.validateServerConfig(serverConfig, serverName);
 
-				// 查找对应的MCP配置实体
-				McpConfigEntity mcpConfigEntity = mcpConfigRepository.findByMcpServerName(serverName);
-				if (mcpConfigEntity == null) {
-					mcpConfigEntity = new McpConfigEntity();
-					mcpConfigEntity.setConnectionConfig(configJson);
-					mcpConfigEntity.setMcpServerName(serverName);
-					mcpConfigEntity.setConnectionType(mcpConfigType);
+			// 获取连接类型
+			McpConfigType connectionType = serverConfig.getConnectionType();
+			logger.info("Using connection type for server '{}': {}", serverName, connectionType);
+
+			// 转换为JSON
+			String serverConfigJson = serverConfig.toJson();
+
+			// 查找或创建实体
+			McpConfigEntity mcpConfigEntity = mcpConfigRepository.findByMcpServerName(serverName);
+			if (mcpConfigEntity == null) {
+				mcpConfigEntity = new McpConfigEntity();
+				mcpConfigEntity.setConnectionConfig(serverConfigJson);
+				mcpConfigEntity.setMcpServerName(serverName);
+				mcpConfigEntity.setConnectionType(connectionType);
+				// 设置status，如果serverConfig中有status则使用，否则使用默认值
+				if (serverConfig.getStatus() != null) {
+					mcpConfigEntity.setStatus(serverConfig.getStatus());
 				}
 				else {
-					mcpConfigEntity.setConnectionConfig(configJson);
-					mcpConfigEntity.setConnectionType(mcpConfigType);
+					mcpConfigEntity.setStatus(McpConfigStatus.ENABLE);
 				}
-				McpConfigEntity entity = mcpConfigRepository.save(mcpConfigEntity);
-				entityList.add(entity);
-				logger.info("MCP server '{}' has been saved to database.", serverName);
-
 			}
+			else {
+				mcpConfigEntity.setConnectionConfig(serverConfigJson);
+				mcpConfigEntity.setConnectionType(connectionType);
+				// 更新status，如果serverConfig中有status则使用，否则保持原值
+				if (serverConfig.getStatus() != null) {
+					mcpConfigEntity.setStatus(serverConfig.getStatus());
+				}
+			}
+
+			McpConfigEntity entity = mcpConfigRepository.save(mcpConfigEntity);
+			entityList.add(entity);
+			logger.info("MCP server '{}' has been saved to database with connection type: {}", serverName,
+					connectionType);
 		}
+
+		// 清除缓存以重新加载服务
+		cacheManager.invalidateAllCache();
 		return entityList;
-
 	}
 
-	public void removeMcpServer(long id) {
-		Optional<McpConfigEntity> mcpConfigEntity = mcpConfigRepository.findById(id);
-		mcpConfigEntity.ifPresent(this::removeMcpServer);
-	}
-
-	public void removeMcpServer(String mcpServerName) {
-		var mcpConfig = mcpConfigRepository.findByMcpServerName(mcpServerName);
-		removeMcpServer(mcpConfig);
-	}
-
-	private void removeMcpServer(McpConfigEntity mcpConfig) {
-		if (null == mcpConfig) {
-			return;
+	/**
+	 * 保存单个MCP服务器配置
+	 * @param requestVO MCP服务器表单请求
+	 * @return 配置实体
+	 * @throws IOException IO异常
+	 */
+	@Override
+	public McpConfigEntity saveMcpServer(McpServerRequestVO requestVO) throws IOException {
+		// 验证请求数据
+		List<String> validationErrors = requestVO.validateWithDetails();
+		if (!validationErrors.isEmpty()) {
+			String errorMessage = "MCP服务器配置验证失败: " + String.join("; ", validationErrors);
+			throw new IllegalArgumentException(errorMessage);
 		}
 
-		mcpConfigRepository.delete(mcpConfig);
-		toolCallbackMapCache.invalidateAll();
+		// 构建服务器配置
+		McpServerConfig serverConfig = new McpServerConfig(objectMapper);
+		serverConfig.setCommand(requestVO.getCommand());
+		serverConfig.setUrl(requestVO.getUrl());
+		serverConfig.setArgs(requestVO.getArgs());
+		serverConfig.setEnv(requestVO.getEnv());
+
+		// 设置状态
+		if (requestVO.getStatus() != null) {
+			serverConfig.setStatus(McpConfigStatus.valueOf(requestVO.getStatus()));
+		}
+
+		// 验证服务器配置
+		configValidator.validateServerConfig(serverConfig, requestVO.getMcpServerName());
+
+		// 获取连接类型
+		McpConfigType connectionType = serverConfig.getConnectionType();
+		logger.info("Using connection type for server '{}': {}", requestVO.getMcpServerName(), connectionType);
+
+		// 转换为JSON
+		String configJson = serverConfig.toJson();
+
+		// 查找或创建实体
+		McpConfigEntity mcpConfigEntity;
+		if (requestVO.isUpdate()) {
+			// 更新模式
+			Optional<McpConfigEntity> existingEntity = mcpConfigRepository.findById(requestVO.getId());
+			if (existingEntity.isEmpty()) {
+				throw new IllegalArgumentException("MCP server not found with id: " + requestVO.getId());
+			}
+			mcpConfigEntity = existingEntity.get();
+		}
+		else {
+			// 新增模式 - 检查服务器名称是否已存在
+			McpConfigEntity existingServer = mcpConfigRepository.findByMcpServerName(requestVO.getMcpServerName());
+			configValidator.validateServerNameNotExists(requestVO.getMcpServerName(), existingServer);
+			mcpConfigEntity = new McpConfigEntity();
+		}
+
+		// 更新实体
+		mcpConfigEntity.setMcpServerName(requestVO.getMcpServerName());
+		mcpConfigEntity.setConnectionConfig(configJson);
+		mcpConfigEntity.setConnectionType(connectionType);
+		mcpConfigEntity.setStatus(serverConfig.getStatus());
+
+		// 保存到数据库
+		McpConfigEntity savedEntity = mcpConfigRepository.save(mcpConfigEntity);
+		logger.info("MCP server '{}' has been saved to database with connection type: {}", requestVO.getMcpServerName(),
+				connectionType);
+
+		// 清除缓存以重新加载服务
+		cacheManager.invalidateAllCache();
+
+		return savedEntity;
 	}
 
+	/**
+	 * 删除MCP服务器（通过ID）
+	 * @param id 服务器ID
+	 */
+	@Override
+	public void removeMcpServer(long id) {
+		removeMcpServer((Object) id);
+	}
+
+	/**
+	 * 删除MCP服务器（通过名称）
+	 * @param mcpServerName 服务器名称
+	 */
+	@Override
+	public void removeMcpServer(String mcpServerName) {
+		removeMcpServer((Object) mcpServerName);
+	}
+
+	/**
+	 * 删除MCP服务器（通用方法）
+	 * @param identifier 服务器ID（Long）或服务器名称（String）
+	 */
+	private void removeMcpServer(Object identifier) {
+		McpConfigEntity mcpConfig = null;
+
+		if (identifier instanceof Long id) {
+			Optional<McpConfigEntity> optionalEntity = mcpConfigRepository.findById(id);
+			mcpConfig = optionalEntity.orElse(null);
+		}
+		else if (identifier instanceof String serverName) {
+			mcpConfig = mcpConfigRepository.findByMcpServerName(serverName);
+		}
+		else {
+			throw new IllegalArgumentException("Identifier must be Long (ID) or String (server name)");
+		}
+
+		if (mcpConfig != null) {
+			mcpConfigRepository.delete(mcpConfig);
+			cacheManager.invalidateAllCache();
+			logger.info("MCP server '{}' has been removed", mcpConfig.getMcpServerName());
+		}
+		else {
+			logger.warn("MCP server not found for identifier: {}", identifier);
+		}
+	}
+
+	/**
+	 * 获取所有MCP服务器配置
+	 * @return MCP配置实体列表
+	 */
+	@Override
 	public List<McpConfigEntity> getMcpServers() {
 		return mcpConfigRepository.findAll();
 	}
 
+	/**
+	 * 根据ID查找MCP配置
+	 * @param id MCP配置ID
+	 * @return 可选的MCP配置实体
+	 */
+	public Optional<McpConfigEntity> findById(Long id) {
+		return mcpConfigRepository.findById(id);
+	}
+
+	/**
+	 * 获取MCP服务实体列表
+	 * @param planId 计划ID
+	 * @return MCP服务实体列表
+	 */
+	@Override
 	public List<McpServiceEntity> getFunctionCallbacks(String planId) {
-		try {
-			return new ArrayList<>(
-					this.toolCallbackMapCache.get(Optional.ofNullable(planId).orElse("DEFAULT")).values());
+		return cacheManager.getServiceEntities(planId);
+	}
+
+	/**
+	 * 关闭指定计划的MCP服务
+	 * @param planId 计划ID
+	 */
+	@Override
+	public void close(String planId) {
+		cacheManager.invalidateCache(planId);
+	}
+
+	/**
+	 * 启用MCP服务器
+	 * @param id MCP服务器ID
+	 * @return true if enabled successfully, false otherwise
+	 */
+	public boolean enableMcpServer(Long id) {
+		return updateMcpServerStatus(id, McpConfigStatus.ENABLE);
+	}
+
+	/**
+	 * 禁用MCP服务器
+	 * @param id MCP服务器ID
+	 * @return true if disabled successfully, false otherwise
+	 */
+	public boolean disableMcpServer(Long id) {
+		return updateMcpServerStatus(id, McpConfigStatus.DISABLE);
+	}
+
+	/**
+	 * 更新MCP服务器状态
+	 * @param id MCP服务器ID
+	 * @param status 目标状态
+	 * @return true if updated successfully, false otherwise
+	 */
+	@Override
+	public boolean updateMcpServerStatus(Long id, McpConfigStatus status) {
+		Optional<McpConfigEntity> optionalEntity = mcpConfigRepository.findById(id);
+		if (optionalEntity.isEmpty()) {
+			throw new IllegalArgumentException("MCP server not found with id: " + id);
 		}
-		catch (Throwable t) {
-			logger.error("Failed to get function callbacks for plan: {}", planId, t);
-			return new ArrayList<>();
+
+		McpConfigEntity entity = optionalEntity.get();
+		if (entity.getStatus() == status) {
+			logger.info("MCP server {} is already {}", entity.getMcpServerName(), status);
+			return true;
+		}
+
+		try {
+			entity.setStatus(status);
+			mcpConfigRepository.save(entity);
+
+			// 清除缓存以重新加载服务
+			cacheManager.invalidateAllCache();
+
+			logger.info("MCP server {} {} successfully", entity.getMcpServerName(), status);
+			return true;
+		}
+		catch (Exception e) {
+			logger.error("Failed to {} MCP server {}: {}", status, entity.getMcpServerName(), e.getMessage(), e);
+			return false;
 		}
 	}
 

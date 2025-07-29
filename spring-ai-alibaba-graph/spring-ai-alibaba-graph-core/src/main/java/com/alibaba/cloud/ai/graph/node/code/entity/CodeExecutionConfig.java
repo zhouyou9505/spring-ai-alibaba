@@ -36,6 +36,14 @@ public class CodeExecutionConfig {
 
 	private int lastMessagesNumber = 1;
 
+	private String classPath;
+
+	private int maxConnections = 100;
+
+	private int connectionTimeout = 30;
+
+	private int responseTimeout = 50;
+
 	public String getWorkDir() {
 		return workDir;
 	}
@@ -76,7 +84,7 @@ public class CodeExecutionConfig {
 		return containerName;
 	}
 
-	public CodeExecutionConfig setCodeExecutionConfig(String containerName) {
+	public CodeExecutionConfig setContainerName(String containerName) {
 		this.containerName = containerName;
 		return this;
 	}
@@ -88,6 +96,40 @@ public class CodeExecutionConfig {
 	public CodeExecutionConfig setDockerHost(String dockerHost) {
 		this.dockerHost = dockerHost;
 		return this;
+	}
+
+	public String getClassPath() {
+		return classPath;
+	}
+
+	public CodeExecutionConfig setClassPath(String classPath) {
+		this.classPath = classPath;
+		return this;
+
+	}
+
+	public int getMaxConnections() {
+		return maxConnections;
+	}
+
+	public void setMaxConnections(final int maxConnections) {
+		this.maxConnections = maxConnections;
+	}
+
+	public int getConnectionTimeout() {
+		return connectionTimeout;
+	}
+
+	public void setConnectionTimeout(final int connectionTimeout) {
+		this.connectionTimeout = connectionTimeout;
+	}
+
+	public int getResponseTimeout() {
+		return responseTimeout;
+	}
+
+	public void setResponseTimeout(final int responseTimeout) {
+		this.responseTimeout = responseTimeout;
 	}
 
 }

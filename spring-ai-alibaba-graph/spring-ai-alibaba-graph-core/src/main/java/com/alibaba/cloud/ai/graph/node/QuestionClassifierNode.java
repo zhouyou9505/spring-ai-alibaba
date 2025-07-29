@@ -15,14 +15,8 @@
  */
 package com.alibaba.cloud.ai.graph.node;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
-
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
@@ -30,6 +24,11 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.util.StringUtils;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class QuestionClassifierNode implements NodeAction {
 
@@ -82,13 +81,16 @@ public class QuestionClassifierNode implements NodeAction {
 
 	private String inputTextKey;
 
+	private String outputKey;
+
 	public QuestionClassifierNode(ChatClient chatClient, String inputTextKey, List<String> categories,
-			List<String> classificationInstructions) {
+			List<String> classificationInstructions, String outputKey) {
 		this.chatClient = chatClient;
 		this.inputTextKey = inputTextKey;
 		this.categories = categories;
 		this.classificationInstructions = classificationInstructions;
 		this.systemPromptTemplate = new SystemPromptTemplate(CLASSIFIER_PROMPT_TEMPLATE);
+		this.outputKey = outputKey;
 	}
 
 	@Override
@@ -116,7 +118,7 @@ public class QuestionClassifierNode implements NodeAction {
 			.chatResponse();
 
 		Map<String, Object> updatedState = new HashMap<>();
-		updatedState.put("classifier_output", response.getResult().getOutput().getText());
+		updatedState.put(outputKey, response.getResult().getOutput().getText());
 		if (state.value("messages").isPresent()) {
 			updatedState.put("messages", response.getResult().getOutput());
 		}
@@ -138,6 +140,8 @@ public class QuestionClassifierNode implements NodeAction {
 
 		private List<String> classificationInstructions;
 
+		private String outputKey;
+
 		public Builder inputTextKey(String input) {
 			this.inputTextKey = input;
 			return this;
@@ -158,8 +162,14 @@ public class QuestionClassifierNode implements NodeAction {
 			return this;
 		}
 
+		public Builder outputKey(String outputKey) {
+			this.outputKey = outputKey;
+			return this;
+		}
+
 		public QuestionClassifierNode build() {
-			return new QuestionClassifierNode(chatClient, inputTextKey, categories, classificationInstructions);
+			return new QuestionClassifierNode(chatClient, inputTextKey, categories, classificationInstructions,
+					outputKey);
 		}
 
 	}

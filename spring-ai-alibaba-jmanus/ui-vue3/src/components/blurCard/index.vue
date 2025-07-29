@@ -39,12 +39,17 @@ const props = defineProps<{
 const emit = defineEmits(['clickCard'])
 
 const handleClick = () => {
+  console.log('[BlurCard] handleClick called with content:', props.content)
   emit('clickCard', props.content)
+  console.log('[BlurCard] clickCard event emitted')
 }
 </script>
 
 <style scoped>
 .blur-card {
+  width: 100%; 
+  height: 100%;
+  box-sizing: border-box; 
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
@@ -55,6 +60,7 @@ const handleClick = () => {
   display: flex;
   align-items: flex-start;
   gap: 16px;
+
 
   &:hover {
     background: rgba(255, 255, 255, 0.05);
@@ -71,6 +77,9 @@ const handleClick = () => {
   }
 
   .blur-card-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
     h3 {
       font-size: 16px;
       font-weight: 600;

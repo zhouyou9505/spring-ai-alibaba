@@ -15,19 +15,36 @@
  */
 package com.alibaba.cloud.ai.example.manus.dynamic.mcp.model.vo;
 
+import com.alibaba.cloud.ai.example.manus.dynamic.mcp.model.po.McpConfigType;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.alibaba.cloud.ai.example.manus.dynamic.mcp.model.po.McpConfigStatus;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * 内部服务器配置类
+ * Internal server configuration class
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class McpServerConfig {
+
+	private final ObjectMapper objectMapper;
+
+	/**
+	 * Default constructor for Jackson deserialization
+	 */
+	public McpServerConfig() {
+		this.env = new HashMap<>();
+		this.objectMapper = new ObjectMapper();
+	}
+
+	public McpServerConfig(ObjectMapper objectMapper) {
+		this.env = new HashMap<>();
+		this.objectMapper = objectMapper;
+	}
 
 	private String url;
 
@@ -40,9 +57,8 @@ public class McpServerConfig {
 	@JsonProperty("env")
 	private Map<String, String> env;
 
-	public McpServerConfig() {
-		this.env = new HashMap<>();
-	}
+	@JsonProperty("status")
+	private McpConfigStatus status = McpConfigStatus.ENABLE; // 默认为启用状态
 
 	public String getUrl() {
 		return url;
@@ -76,32 +92,84 @@ public class McpServerConfig {
 		this.env = env;
 	}
 
+	public McpConfigStatus getStatus() {
+		return status;
+	}
+
+	public void setStatus(McpConfigStatus status) {
+		this.status = status;
+	}
+
 	/**
-	 * 将ServerConfig转换为JSON字符串
-	 * @return 转换后的JSON字符串
+	 * 获取连接类型 判断逻辑： 1. 如果有command字段 → STUDIO 2. 如果URL后缀是sse → SSE 3. 其他情况 → STREAMING
+	 * @return 连接类型
+	 */
+	public McpConfigType getConnectionType() {
+		// 1. 检查是否有command字段
+		if (command != null && !command.isEmpty()) {
+			return McpConfigType.STUDIO;
+		}
+
+		// 2. 检查URL后缀是否为sse
+		if (url != null && !url.isEmpty() && isSSEUrl(url)) {
+			return McpConfigType.SSE;
+		}
+
+		// 3. 其他情况默认为STREAMING
+		return McpConfigType.STREAMING;
+	}
+
+	/**
+	 * 判断URL是否为SSE连接
+	 * @param url 服务器URL
+	 * @return 是否为SSE URL
+	 */
+	private boolean isSSEUrl(String url) {
+		if (url == null || url.isEmpty()) {
+			return false;
+		}
+
+		try {
+			java.net.URL parsedUrl = new java.net.URL(url);
+			String path = parsedUrl.getPath();
+
+			// 检查路径是否包含sse
+			boolean pathContainsSse = path != null && path.toLowerCase().contains("sse");
+
+			return pathContainsSse;
+		}
+		catch (java.net.MalformedURLException e) {
+			// 如果URL格式无效，返回false
+			return false;
+		}
+	}
+
+	/**
+	 * Convert ServerConfig to JSON string
+	 * @return Converted JSON string
 	 */
 	public String toJson() {
 		try {
-			return new ObjectMapper().writeValueAsString(this);
+			return objectMapper.writeValueAsString(this);
 		}
 		catch (Exception e) {
-			// 如果序列化失败，则手动构建简化版JSON
+			// If serialization fails, manually build a simplified JSON
 			StringBuilder sb = new StringBuilder();
 			sb.append("{");
 
-			// 添加URL（如果存在）
+			// Add URL (if it exists)
 			if (url != null && !url.isEmpty()) {
 				sb.append("\"url\":\"").append(url).append("\"");
 			}
 
-			// 添加命令（如果存在）
+			// Add command (if it exists)
 			if (command != null && !command.isEmpty()) {
 				if (sb.length() > 1)
 					sb.append(",");
 				sb.append("\"command\":\"").append(command).append("\"");
 			}
 
-			// 添加参数（如果存在）
+			// Add parameters (if they exist)
 			if (args != null && !args.isEmpty()) {
 				if (sb.length() > 1)
 					sb.append(",");
@@ -116,7 +184,7 @@ public class McpServerConfig {
 				sb.append("]");
 			}
 
-			// 添加环境变量（如果存在）
+			// Add environment variables (if they exist)
 			if (env != null && !env.isEmpty()) {
 				if (sb.length() > 1)
 					sb.append(",");
@@ -130,6 +198,11 @@ public class McpServerConfig {
 				}
 				sb.append("}");
 			}
+
+			// Add status (always include)
+			if (sb.length() > 1)
+				sb.append(",");
+			sb.append("\"status\":\"").append(status.name()).append("\"");
 
 			sb.append("}");
 			return sb.toString();

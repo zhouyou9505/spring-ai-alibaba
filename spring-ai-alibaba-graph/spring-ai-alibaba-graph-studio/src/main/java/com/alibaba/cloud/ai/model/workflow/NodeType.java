@@ -40,7 +40,29 @@ public enum NodeType {
 
 	DOC_EXTRACTOR("document-extractor", "document-extractor"),
 
-	QUESTION_CLASSIFIER("question-classifier", "question-classifier");
+	QUESTION_CLASSIFIER("question-classifier", "question-classifier"),
+
+	HTTP("http", "http-request"),
+
+	LIST_OPERATOR("list-operator", "variable-operator"),
+
+	PARAMETER_PARSING("parameter-parsing", "parameter-parsing"),
+
+	TOOL("tool", "tool"),
+
+	KNOWLEDGE_RETRIEVAL("knowledge-retrieval", "knowledge-retrieval"),
+
+	MCP("mcp", "unsupported"),
+
+	TEMPLATE_TRANSFORM("template-transform", "template-transform"),
+
+	VARIABLE_AGGREGATOR("variable-aggregator", "variable-aggregator"),
+
+	ITERATION("iteration", "iteration"),
+
+	DIFY_ITERATION_START("__empty__", "iteration-start"),
+
+	ASSIGNER("assigner", "assigner");
 
 	private String value;
 

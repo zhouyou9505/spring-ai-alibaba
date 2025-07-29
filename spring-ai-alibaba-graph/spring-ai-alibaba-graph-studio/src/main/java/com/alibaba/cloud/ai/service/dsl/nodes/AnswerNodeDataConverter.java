@@ -23,7 +23,10 @@ import com.alibaba.cloud.ai.service.dsl.DSLDialectType;
 import com.alibaba.cloud.ai.utils.StringTemplateUtil;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 @Component
@@ -58,7 +61,11 @@ public class AnswerNodeDataConverter extends AbstractNodeDataConverter<AnswerNod
 					String[] splits = variable.split("\\.", 2);
 					return new VariableSelector(splits[0], splits[1]);
 				}).toList();
-				return new AnswerNodeData(inputs, AnswerNodeData.DEFAULT_OUTPUTS).setAnswer(tmpl);
+				String outputKey = (String) data.get("output_key");
+
+				AnswerNodeData nd = new AnswerNodeData(inputs, AnswerNodeData.DEFAULT_OUTPUTS).setAnswer(tmpl);
+				nd.setOutputKey(outputKey);
+				return nd;
 			}
 
 			@Override
@@ -82,6 +89,11 @@ public class AnswerNodeDataConverter extends AbstractNodeDataConverter<AnswerNod
 			this.dialectConverter = dialectConverter;
 		}
 
+	}
+
+	@Override
+	public String generateVarName(int count) {
+		return "answerNode" + count;
 	}
 
 }

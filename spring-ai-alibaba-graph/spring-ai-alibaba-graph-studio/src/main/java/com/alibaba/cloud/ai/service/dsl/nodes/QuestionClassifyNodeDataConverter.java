@@ -15,7 +15,9 @@
  */
 package com.alibaba.cloud.ai.service.dsl.nodes;
 
+import com.alibaba.cloud.ai.model.Variable;
 import com.alibaba.cloud.ai.model.VariableSelector;
+import com.alibaba.cloud.ai.model.VariableType;
 import com.alibaba.cloud.ai.model.workflow.NodeType;
 import com.alibaba.cloud.ai.model.workflow.nodedata.QuestionClassifierNodeData;
 import com.alibaba.cloud.ai.service.dsl.AbstractNodeDataConverter;
@@ -26,6 +28,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import org.apache.commons.collections4.CollectionUtils;
+import org.springframework.stereotype.Component;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -38,6 +41,7 @@ import java.util.stream.Stream;
  * @author HeYQ
  * @since 2024-12-12 23:54
  */
+@Component
 public class QuestionClassifyNodeDataConverter extends AbstractNodeDataConverter<QuestionClassifierNodeData> {
 
 	@Override
@@ -73,7 +77,7 @@ public class QuestionClassifyNodeDataConverter extends AbstractNodeDataConverter
 				Map<String, Object> modelData = (Map<String, Object>) data.get("model");
 				ObjectMapper objectMapper = new ObjectMapper();
 				objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-				objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.LOWER_CASE);
+				objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
 				QuestionClassifierNodeData.ModelConfig modelConfig = new QuestionClassifierNodeData.ModelConfig()
 					.setMode((String) modelData.get("mode"))
 					.setName((String) modelData.get("name"))
@@ -96,7 +100,7 @@ public class QuestionClassifyNodeDataConverter extends AbstractNodeDataConverter
 					List<Map<String, Object>> classes = (List<Map<String, Object>>) data.get("classes");
 					nodeData.setClasses(classes.stream()
 						.map(item -> new QuestionClassifierNodeData.ClassConfig().setId((String) item.get("id"))
-							.setText((String) item.get("text")))
+							.setText((String) item.get("name")))
 						.toList());
 				}
 
@@ -114,6 +118,12 @@ public class QuestionClassifyNodeDataConverter extends AbstractNodeDataConverter
 						.setIncludeLastMessage(false);
 					nodeData.setMemoryConfig(memory);
 				}
+
+				// output_key
+				String outputKey = (String) data.get("output_key");
+				nodeData.setOutputKey(outputKey);
+
+				// input_text_key
 
 				return nodeData;
 			}
@@ -179,6 +189,31 @@ public class QuestionClassifyNodeDataConverter extends AbstractNodeDataConverter
 			this.dialectConverter = dialectConverter;
 		}
 
+	}
+
+	public String generateVarName(int count) {
+		return "questionClassifyNode" + count;
+	}
+
+	@Override
+	public void postProcess(QuestionClassifierNodeData data, String varName) {
+		String origKey = data.getOutputKey();
+		String newKey = varName + "_output";
+
+		if (origKey == null) {
+			data.setOutputKey(newKey);
+		}
+		data.setOutputs(List.of(new com.alibaba.cloud.ai.model.Variable(data.getOutputKey(),
+				com.alibaba.cloud.ai.model.VariableType.STRING.value())));
+	}
+
+	@Override
+	public Stream<Variable> extractWorkflowVars(QuestionClassifierNodeData data) {
+		Stream<Variable> outVar = Stream.of(new Variable(data.getOutputKey(), VariableType.STRING.value()));
+		Stream<Variable> inVars = data.getInputs()
+			.stream()
+			.map(sel -> new Variable(sel.getName(), VariableType.STRING.value()));
+		return Stream.concat(outVar, inVars);
 	}
 
 }

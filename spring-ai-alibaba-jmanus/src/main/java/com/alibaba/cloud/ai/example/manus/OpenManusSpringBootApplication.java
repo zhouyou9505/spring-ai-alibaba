@@ -16,25 +16,26 @@
 
 package com.alibaba.cloud.ai.example.manus;
 
+import com.microsoft.playwright.Playwright;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.data.mongodb.config.EnableMongoAuditing;
-import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
-import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
+
+import java.io.IOException;
 
 @SpringBootApplication
-@EnableMongoAuditing
-@EnableAsync
-@ComponentScan(basePackages = {"com.alibaba.cloud.ai.example.manus","com.alibaba.cloud.ai.example.manus2"})
-@EntityScan(basePackages = {"com.alibaba.cloud.ai.example.manus","com.alibaba.cloud.ai.example.manus2"})
-@EnableMongoRepositories(basePackages = {"com.alibaba.cloud.ai.example.manus2"})
+@EnableScheduling
 public class OpenManusSpringBootApplication {
 
-	public static void main(String[] args) {
-
-		SpringApplication.run(OpenManusSpringBootApplication.class, args);
+	public static void main(String[] args) throws IOException, InterruptedException {
+		if (args != null && args.length >= 1 && args[0].equals("playwright-init")) {
+			Playwright.create();
+			System.out.println("Playwright init finished");
+			System.exit(0);
+		}
+		else {
+			SpringApplication.run(OpenManusSpringBootApplication.class, args);
+		}
 	}
 
 }

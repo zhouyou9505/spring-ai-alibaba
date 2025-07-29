@@ -16,27 +16,28 @@
 
 package com.alibaba.cloud.ai.example.graph.bigtool.agent;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
-
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.definition.DefaultToolDefinition;
-import org.springframework.ai.tool.definition.ToolDefinition;
 import org.springframework.ai.tool.method.MethodToolCallback;
 import org.springframework.ai.tool.support.ToolUtils;
 import org.springframework.ai.util.json.schema.JsonSchemaGenerator;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 
-import static com.alibaba.cloud.ai.example.graph.bigtool.constants.Constant.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static com.alibaba.cloud.ai.example.graph.bigtool.constants.Constant.HIT_TOOL;
+import static com.alibaba.cloud.ai.example.graph.bigtool.constants.Constant.METHOD_NAME;
+import static com.alibaba.cloud.ai.example.graph.bigtool.constants.Constant.METHOD_PARAMETER_TYPES;
+import static com.alibaba.cloud.ai.example.graph.bigtool.constants.Constant.SOLUTION;
 
 public class CalculateAgent implements NodeAction {
 

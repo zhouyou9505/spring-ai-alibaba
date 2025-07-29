@@ -15,8 +15,8 @@
 #
 name: 🚀 Feature Request
 description: I have a suggestion (and may want to implement it 🙂)!
-title: "[Feature] <title>"
-labels: ["new feature"]
+title: "[Feature] "
+labels: ["needs-triage"]
 body:
   - type: textarea
     attributes:

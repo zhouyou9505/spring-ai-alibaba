@@ -15,8 +15,8 @@
 #
 name: 🐛 Bug Report
 description: Problems and issues with code of Spring AI Alibaba 🤔.
-title: "[BUG] <title>"
-labels: ["bug"]
+title: "[BUG] "
+labels: ["needs-triage", "kind/bug"]
 body:
   - type: checkboxes
     attributes:

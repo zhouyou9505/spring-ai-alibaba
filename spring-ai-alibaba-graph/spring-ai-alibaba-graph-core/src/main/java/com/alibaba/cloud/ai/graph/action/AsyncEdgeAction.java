@@ -19,6 +19,7 @@ import com.alibaba.cloud.ai.graph.OverAllState;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+import io.opentelemetry.context.Context;
 
 /**
  * Represents an asynchronous edge action that operates on an agent state and returns a
@@ -30,10 +31,10 @@ public interface AsyncEdgeAction extends Function<OverAllState, CompletableFutur
 
 	/**
 	 * Applies this action to the given agent state.
-	 * @param t the agent state
+	 * @param state the agent state
 	 * @return a CompletableFuture representing the result of the action
 	 */
-	CompletableFuture<String> apply(OverAllState t);
+	CompletableFuture<String> apply(OverAllState state);
 
 	/**
 	 * Creates an asynchronous edge action from a synchronous edge action.
@@ -41,15 +42,16 @@ public interface AsyncEdgeAction extends Function<OverAllState, CompletableFutur
 	 * @return an asynchronous edge action
 	 */
 	static AsyncEdgeAction edge_async(EdgeAction syncAction) {
-		return t -> {
-			CompletableFuture<String> result = new CompletableFuture<>();
-			try {
-				result.complete(syncAction.apply(t));
-			}
-			catch (Exception e) {
-				result.completeExceptionally(e);
-			}
-			return result;
+		return state -> {
+			Context context = Context.current();
+			return CompletableFuture.supplyAsync(context.wrapSupplier(() -> {
+				try {
+					return syncAction.apply(state);
+				}
+				catch (Exception e) {
+					throw new RuntimeException(e);
+				}
+			}), AsyncNodeAction.BOUNDED_ELASTIC_EXECUTOR);
 		};
 	}
 

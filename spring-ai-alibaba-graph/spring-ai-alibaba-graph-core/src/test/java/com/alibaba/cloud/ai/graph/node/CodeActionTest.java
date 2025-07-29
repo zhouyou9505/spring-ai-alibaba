@@ -26,7 +26,11 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * @author HeYQ
@@ -69,6 +73,61 @@ public class CodeActionTest {
 		OverAllState mockState = new OverAllState(initData);
 		Map<String, Object> stateData = codeNode.apply(mockState);
 		System.out.println(stateData);
+	}
+
+	@Test
+	void testExecuteJavaWithLocalExecutor() throws Exception {
+		// Prepare test data
+		String javaCode = """
+				public static Object main(Object[] inputs) {
+					// Process input parameters
+					String text = (String) inputs[0];
+					Integer count = (Integer) inputs[1];
+
+					// Execute business logic
+					StringBuilder result = new StringBuilder();
+					for (int i = 0; i < count; i++) {
+						result.append(text).append(" ");
+					}
+
+					Map<String, Object> response = new HashMap<>();
+					response.put("repeated_text", result.toString().trim());
+					response.put("length", result.length());
+					response.put("count", count);
+
+					return response;
+				}
+				""";
+
+		// Create parameter mapping
+		Map<String, String> params = new LinkedHashMap<>();
+		params.put("text", "text");
+		params.put("count", "count");
+		// Create code execution node action
+		NodeAction codeNode = CodeExecutorNodeAction.builder()
+			.codeExecutor(new LocalCommandlineCodeExecutor())
+			.code(javaCode)
+			.codeLanguage("java")
+			.config(config)
+			.params(params)
+			.outputKey("codeNode1_output")
+			.build();
+
+		// Prepare input data
+		Map<String, Object> initData = new LinkedHashMap<>();
+		initData.put("text", "Hello");
+		initData.put("count", 3);
+		OverAllState mockState = new OverAllState(initData);
+
+		// Execute code
+		Map<String, Object> result = codeNode.apply(mockState);
+		Map codeNode1Output = (Map<String, String>) result.get("codeNode1_output");
+
+		// Verify results
+		assertNotNull(result);
+		assertEquals("Hello Hello Hello", codeNode1Output.get("repeated_text"));
+		assertEquals(18, codeNode1Output.get("length"));
+		assertEquals(3, codeNode1Output.get("count"));
 	}
 
 }

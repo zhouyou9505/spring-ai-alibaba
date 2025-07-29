@@ -17,12 +17,24 @@ package com.alibaba.cloud.ai.toolcalling.tavily;
 
 import com.alibaba.cloud.ai.toolcalling.common.JsonParseTool;
 import com.alibaba.cloud.ai.toolcalling.common.WebClientTool;
-import com.fasterxml.jackson.annotation.*;
+import com.alibaba.cloud.ai.toolcalling.common.interfaces.SearchService;
+import com.fasterxml.jackson.annotation.JsonClassDescription;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.List;
 import java.util.function.Function;
@@ -32,7 +44,8 @@ import java.util.function.Function;
  *
  * @author Allen Hu
  */
-public class TavilySearchService implements Function<TavilySearchService.Request, TavilySearchService.Response> {
+public class TavilySearchService
+		implements SearchService, Function<TavilySearchService.Request, TavilySearchService.Response> {
 
 	private static final Logger logger = LoggerFactory.getLogger(TavilySearchService.class);
 
@@ -43,6 +56,11 @@ public class TavilySearchService implements Function<TavilySearchService.Request
 	public TavilySearchService(JsonParseTool jsonParseTool, WebClientTool webClientTool) {
 		this.jsonParseTool = jsonParseTool;
 		this.webClientTool = webClientTool;
+	}
+
+	@Override
+	public SearchService.Response query(String query) {
+		return this.apply(Request.simpleQuery(query));
 	}
 
 	@Override
@@ -97,37 +115,70 @@ public class TavilySearchService implements Function<TavilySearchService.Request
 			@JsonProperty(value = "include_domains",
 					defaultValue = "[]") @JsonPropertyDescription("A list of domains to specifically include in the search results.") List<String> includeDomains,
 			@JsonProperty(value = "exclude_domains",
-					defaultValue = "[]") @JsonPropertyDescription("A list of domains to specifically exclude from the search results.") List<String> excludeDomains)
+					defaultValue = "[]") @JsonPropertyDescription("A list of domains to specifically exclude from the search results.") List<String> excludeDomains,
+			@JsonProperty(value = "include_favicon",
+					defaultValue = "true") @JsonPropertyDescription("the icon of search results.") boolean includeIcon)
 			implements
-				Serializable {
+				Serializable,
+				SearchService.Request {
 
 		public static Request simpleQuery(String query) {
-			return new Request(query, null, null, null, null, null, null, null, null, null, null, null, null);
+			return new Request(query, null, null, null, null, null, null, null, null, null, null, null, null, true);
+		}
+
+		@Override
+		public String getQuery() {
+			return this.query();
 		}
 	}
 
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	public record Response(@JsonProperty("query") String query, @JsonProperty("answer") String answer,
 			@JsonProperty("images") List<ImageInfo> images, @JsonProperty("results") List<ResultInfo> results,
-			@JsonProperty("response_time") String responseTime) {
+			@JsonProperty("response_time") String responseTime) implements SearchService.Response {
 		@JsonIgnoreProperties(ignoreUnknown = true)
+		@JsonDeserialize(using = ImageInfoDeserializer.class)
 		public record ImageInfo(@JsonProperty("url") String url, @JsonProperty("description") String description) {
-
 		}
 
 		@JsonIgnoreProperties(ignoreUnknown = true)
 		public record ResultInfo(@JsonProperty("title") String title, @JsonProperty("url") String url,
 				@JsonProperty("content") String content, @JsonProperty("score") String score,
-				@JsonProperty("raw_content") String raw_content) {
+				@JsonProperty("raw_content") String raw_content, @JsonProperty("favicon") String icon) {
 		}
 
 		public static Response errorResponse(String query, String errorMsg) {
 			return new Response(query, errorMsg, null, null, null);
 		}
+
+		@Override
+		public SearchResult getSearchResult() {
+			return new SearchResult(this.results()
+				.stream()
+				.map(item -> new SearchService.SearchContent(item.title(), item.content(), item.url(), item.icon()))
+				.toList());
+		}
 	}
 
-	public record SearchContent(@JsonProperty("title") String title, @JsonProperty("content") String content) {
+}
 
+class ImageInfoDeserializer extends JsonDeserializer<TavilySearchService.Response.ImageInfo> {
+
+	@Override
+	public TavilySearchService.Response.ImageInfo deserialize(JsonParser p, DeserializationContext ctxt)
+			throws IOException, JsonProcessingException {
+		JsonNode node = p.getCodec().readTree(p);
+
+		if (node.isTextual()) {
+			return new TavilySearchService.Response.ImageInfo(node.asText(), null);
+		}
+		else if (node.isObject()) {
+			String url = node.has("url") ? node.get("url").asText() : null;
+			String description = node.has("description") ? node.get("description").asText() : null;
+			return new TavilySearchService.Response.ImageInfo(url, description);
+		}
+
+		return null;
 	}
 
 }

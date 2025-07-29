@@ -1,87 +1,49 @@
 server:
-  port: 3002
-  address: 0.0.0.0
+  port: 18080
 spring:
+  config:
+    import: classpath:application-database-tool.yml
   application:
     name: spring-ai-alibaba-openmanus
+  profiles:
+    active: h2
   main:
-    allow-bean-definition-overriding: true
-  data:
-    mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/rowboat}
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
-      database: 1
-  ai:
-    openai:
-      api-key:  sk-762e6e532c8a4745b881bbf2a7db7608
-      base-url: https://dashscope.aliyuncs.com/compatible-mode
-      chat:
-        options:
-          model: qwen-plus-latest
-    alibaba:
-      toolcalling:
-        tavilysearch:
-          enabled: true
-          api-key: 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
-    mcp:
-      client:
-        enabled: false
-  # H2 数据库配置
+    allow-circular-references: true
+    lazy-initialization: false
+  aop:
+    proxy-target-class: true
+  # Hikari Configuration
   datasource:
-    url: jdbc:h2:file:./h2-data/openmanus_db;MODE=MYSQL;DATABASE_TO_LOWER=TRUE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: $FSD#@!@#!#$!12341234
-  # JPA 配置
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      pool-name: Spring-AI-Alibaba-JManus-${spring.profiles.active}-Pool
+      connection-test-query: SELECT 1
+      validation-timeout: 5000
+      leak-detection-threshold: 60000
+  # JPA Configuration
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
-  # H2 控制台配置
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+
 logging:
   file:
     name: ./logs/info.log
   level:
     root: INFO
 
-
-# API Configuration
-api:
-  key: ${API_KEY:}
-
-# OpenAI Configuration
-#openai:
-#  api:
-#    key: ${OPENAI_API_KEY:}
-#    timeout: 60s
-
-# Application Configuration
-app:
-  enable-tracing: ${ENABLE_TRACING:false}
-  start-turn-with-start-agent: ${START_TURN_WITH_START_AGENT:false}
-
-qdrant:
-  host: ${QDRANT_HOST:localhost}
-  port: ${QDRANT_PORT:6333}
-  api-key: ${QDRANT_API_KEY:}
-  collection-name: ${QDRANT_COLLECTION_NAME:rowboat_agents_embeddings}
+namespace:
+  value: default
 
 agent:
-  max-calls-per-turn: ${AGENT_MAX_CALLS_PER_TURN:10}
-  max-tokens-per-turn: ${AGENT_MAX_TOKENS_PER_TURN:4000}
-  max-tokens-per-response: ${AGENT_MAX_TOKENS_PER_RESPONSE:2000}
-  temperature: ${AGENT_TEMPERATURE:0.7}
-  rag-enabled: ${AGENT_RAG_ENABLED:true}
-  rag-top-k: ${AGENT_RAG_TOP_K:5}
-  rag-similarity-threshold: ${AGENT_RAG_SIMILARITY_THRESHOLD:0.7}
+  # Initialize save agent on startup
+  init: true
+  # Serialize: fastjson | jackson
+  serialize: jackson

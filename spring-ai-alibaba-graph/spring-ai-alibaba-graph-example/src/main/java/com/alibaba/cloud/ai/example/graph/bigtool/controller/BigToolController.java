@@ -22,7 +22,13 @@ import com.alibaba.cloud.ai.example.graph.bigtool.agent.Tool;
 import com.alibaba.cloud.ai.example.graph.bigtool.agent.ToolAgent;
 import com.alibaba.cloud.ai.example.graph.bigtool.service.VectorStoreService;
 import com.alibaba.cloud.ai.example.graph.bigtool.utils.MethodUtils;
-import com.alibaba.cloud.ai.graph.*;
+import com.alibaba.cloud.ai.graph.CompileConfig;
+import com.alibaba.cloud.ai.graph.CompiledGraph;
+import com.alibaba.cloud.ai.graph.GraphRepresentation;
+import com.alibaba.cloud.ai.graph.KeyStrategy;
+import com.alibaba.cloud.ai.graph.OverAllState;
+import com.alibaba.cloud.ai.graph.StateGraph;
+import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import org.slf4j.Logger;
@@ -37,9 +43,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
-import static com.alibaba.cloud.ai.example.graph.bigtool.constants.Constant.*;
+import static com.alibaba.cloud.ai.example.graph.bigtool.constants.Constant.HIT_TOOL;
+import static com.alibaba.cloud.ai.example.graph.bigtool.constants.Constant.INPUT_KEY;
+import static com.alibaba.cloud.ai.example.graph.bigtool.constants.Constant.METHOD_NAME;
+import static com.alibaba.cloud.ai.example.graph.bigtool.constants.Constant.METHOD_PARAMETER_TYPES;
+import static com.alibaba.cloud.ai.example.graph.bigtool.constants.Constant.SOLUTION;
+import static com.alibaba.cloud.ai.example.graph.bigtool.constants.Constant.TOOL_LIST;
 import static com.alibaba.cloud.ai.graph.StateGraph.END;
 import static com.alibaba.cloud.ai.graph.StateGraph.START;
 import static com.alibaba.cloud.ai.graph.action.AsyncNodeAction.node_async;
@@ -56,26 +71,24 @@ public class BigToolController {
 
 	private List<Document> documents = new ArrayList<>();
 
-	public BigToolController(VectorStoreService vectorStoreService, ChatModel chatModel) throws GraphStateException {
+	public BigToolController(VectorStoreService vectorStoreService, ChatModel chatModel, CompileConfig config)
+			throws GraphStateException {
 		this.vectorStoreService = vectorStoreService;
 		this.initializeVectorStore();
 		ChatClient chatClient = ChatClient.builder(chatModel).defaultAdvisors(new SimpleLoggerAdvisor()).build();
-
-		OverAllStateFactory stateFactory = () -> {
-			OverAllState state = new OverAllState();
-			state.registerKeyAndStrategy(INPUT_KEY, new ReplaceStrategy());
-			state.registerKeyAndStrategy(HIT_TOOL, new ReplaceStrategy());
-			state.registerKeyAndStrategy(SOLUTION, new ReplaceStrategy());
-			state.registerKeyAndStrategy(TOOL_LIST, new ReplaceStrategy());
-			return state;
-		};
 
 		ToolAgent tools = new ToolAgent(chatClient, INPUT_KEY, vectorStoreService);
 
 		CalculateAgent calculateAgent = new CalculateAgent(chatClient, INPUT_KEY);
 
-		StateGraph stateGraph = new StateGraph("Consumer Service Workflow Demo", stateFactory)
-			.addNode("tools", node_async(tools))
+		StateGraph stateGraph = new StateGraph("Consumer Service Workflow Demo", () -> {
+			Map<String, KeyStrategy> strategies = new HashMap<>();
+			strategies.put(INPUT_KEY, new ReplaceStrategy());
+			strategies.put(HIT_TOOL, new ReplaceStrategy());
+			strategies.put(SOLUTION, new ReplaceStrategy());
+			strategies.put(TOOL_LIST, new ReplaceStrategy());
+			return strategies;
+		}).addNode("tools", node_async(tools))
 			.addNode("calculate_agent", node_async(calculateAgent))
 			.addEdge(START, "tools")
 			.addEdge("tools", "calculate_agent")
@@ -88,7 +101,7 @@ public class BigToolController {
 		System.out.println(graphRepresentation.content());
 		System.out.println("\n\n");
 
-		this.compiledGraph = stateGraph.compile();
+		this.compiledGraph = stateGraph.compile(config);
 
 	}
 
@@ -111,7 +124,7 @@ public class BigToolController {
 	}
 
 	@GetMapping("/search")
-	public String search(@RequestParam String query) {
+	public String search(@RequestParam String query) throws GraphRunnerException {
 		Optional<OverAllState> invoke = compiledGraph.invoke(Map.of(INPUT_KEY, query, TOOL_LIST, documents));
 		return invoke.get().value("solution").get().toString();
 	}

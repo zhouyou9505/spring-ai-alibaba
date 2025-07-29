@@ -15,7 +15,6 @@
  */
 
 import type { RouteRecordRaw } from 'vue-router'
-import * as _ from 'lodash'
 
 export declare type RouteRecordType = RouteRecordRaw & {
   key?: string
@@ -30,11 +29,30 @@ export const routes: Readonly<RouteRecordType[]> = [
   {
     path: '/',
     name: 'Root',
-    redirect: '/home',
+    redirect: () => {
+      // Check if system is initialized
+      const hasInitialized = localStorage.getItem('hasInitialized') === 'true'
+      if (!hasInitialized) {
+        return '/init'
+      }
+      
+      // Check if user has visited the homepage before
+      const hasVisited = localStorage.getItem('hasVisitedHome') === 'true'
+      return hasVisited ? '/direct' : '/home'
+    },
     meta: {
       skip: true,
     },
     children: [
+      {
+        path: '/init',
+        name: 'init',
+        component: () => import('../views/init/index.vue'),
+        meta: {
+          fullscreen: true,
+          skip: true,
+        },
+      },
       {
         path: '/home',
         name: 'conversation',
@@ -45,16 +63,16 @@ export const routes: Readonly<RouteRecordType[]> = [
         },
       },
       {
-        path: '/plan/:id?',
-        name: 'plan',
-        component: () => import('../views/plan/index.vue'),
+        path: '/direct/:id?',
+        name: 'direct',
+        component: () => import('../views/direct/index.vue'),
         meta: {
-          icon: 'carbon:plan',
+          icon: 'carbon:chat',
           fullscreen: true,
         },
       },
       {
-        path: '/configs',
+        path: '/configs/:category?',
         name: 'configs',
         component: () => import('../views/configs/index.vue'),
         meta: {
@@ -84,9 +102,9 @@ function handleRoutes(
   if (!routes) return
   for (const route of routes) {
     if (parent) {
-      route.path = handlePath(parent?.path, route.path)
+      route.path = handlePath(parent.path, route.path)
     }
-    if (route.redirect) {
+    if (route.redirect && typeof route.redirect === 'string') {
       route.redirect = handlePath(route.path, route.redirect || '')
     }
 

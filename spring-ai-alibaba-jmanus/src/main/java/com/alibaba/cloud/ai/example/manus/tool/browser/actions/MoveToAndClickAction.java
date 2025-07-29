@@ -39,25 +39,18 @@ public class MoveToAndClickAction extends BrowserAction {
 			return new ToolExecuteResult("X and Y coordinates are required for 'move_to_and_click' action");
 		}
 
-		Page page = getCurrentPage(); // 获取 Playwright 的 Page 实例
-		boolean isDebug = getBrowserUseTool().getManusProperties().getBrowserDebug();
+		Page page = getCurrentPage(); // Get the Playwright Page instance
+		boolean isDebug = getBrowserUseTool().getManusProperties().getDebugDetail();
 
 		String clickResultMessage = clickAndSwitchToNewTabIfOpened(page, () -> {
 			try {
-				// 1. 滚动到目标位置（让目标点尽量在视窗中央）
+				// 1. Scroll to the target position (make the target point as close to the
+				// center of the viewport as possible)
 
-				Object result = page.evaluate(
-						"(args) => window.scrollTo({left: args[0], top: args[1], behavior: 'instant'})",
-						new Object[] { x, y });
-				if (result != null) {
-					log.info("Scroll to position ({}, {}) ,result <{}>", x, y, result);
-				}
-				else {
-					log.warn("Failed to scroll to position ({}, {})", x, y);
-				}
+				Object result = null;
 				String markerId = "__move_click_marker__";
 				if (isDebug) {
-					// 2. 注入大红点（仅debug模式）
+					// 2. Inject a large red dot (only in debug mode)
 					result = page.evaluate(
 							"(args) => {\n" + "  const [x, y, id] = args;\n"
 									+ "  let dot = document.getElementById(id);\n" + "  if (!dot) {\n"
@@ -76,19 +69,6 @@ public class MoveToAndClickAction extends BrowserAction {
 					else {
 						log.warn("Debug: Failed to create red dot at position ({}, {}) , result <{}>", x, y, result);
 					}
-
-					// 监听点击事件
-					// page.evaluate(
-					// "(id) => { const dot = document.getElementById(id); if (dot) {
-					// dot.addEventListener('click', () => console.log('Debug: Dot was
-					// clicked!')); } }",
-					// markerId);
-
-					// 获取鼠标移动后的对应元素并打印
-					// String elementInfo = (String) page.evaluate(
-					// "(args) => { const el = document.elementFromPoint(args[0],
-					// args[1]); return el ? el.outerHTML : 'No element'; }",
-					// new Object[] { x, y });
 					log.info("Element at position ({}, {}): {}", x, y);
 				}
 

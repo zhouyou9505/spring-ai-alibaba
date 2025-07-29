@@ -33,7 +33,11 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.util.StringUtils;
 import javax.validation.constraints.NotNull;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -73,6 +77,8 @@ public class KnowledgeRetrievalNode implements NodeAction {
 
 	List<Document> documents;
 
+	private String outputKey;
+
 	private static final Logger logger = LoggerFactory.getLogger(KnowledgeRetrievalNode.class);
 
 	public KnowledgeRetrievalNode() {
@@ -80,7 +86,7 @@ public class KnowledgeRetrievalNode implements NodeAction {
 
 	public KnowledgeRetrievalNode(String userPrompt, Integer topK, Double similarityThreshold,
 			Filter.Expression filterExpression, Boolean enableRanker, RerankModel rerankModel,
-			DashScopeRerankOptions rerankOptions, VectorStore vectorStore) {
+			DashScopeRerankOptions rerankOptions, VectorStore vectorStore, String outputKey) {
 		this.userPrompt = userPrompt;
 		this.topK = topK;
 		this.similarityThreshold = similarityThreshold;
@@ -89,6 +95,7 @@ public class KnowledgeRetrievalNode implements NodeAction {
 		this.rerankModel = rerankModel;
 		this.rerankOptions = rerankOptions;
 		this.vectorStore = vectorStore;
+		this.outputKey = outputKey;
 	}
 
 	@Override
@@ -145,6 +152,9 @@ public class KnowledgeRetrievalNode implements NodeAction {
 		}
 		if (StringUtils.hasLength(vectorStoreKey)) {
 			this.vectorStore = (VectorStore) state.value(vectorStoreKey).orElse(this.vectorStore);
+		}
+		if (StringUtils.hasLength(outputKey)) {
+			this.outputKey = (String) state.value(outputKey).orElse(this.outputKey);
 		}
 	}
 
@@ -248,6 +258,8 @@ public class KnowledgeRetrievalNode implements NodeAction {
 
 		private VectorStore vectorStore;
 
+		private String outputKey;
+
 		public Builder userPromptKey(String userPromptKey) {
 			this.userPromptKey = userPromptKey;
 			return this;
@@ -328,6 +340,11 @@ public class KnowledgeRetrievalNode implements NodeAction {
 			return this;
 		}
 
+		public Builder outputKey(String outputKey) {
+			this.outputKey = outputKey;
+			return this;
+		}
+
 		public KnowledgeRetrievalNode build() {
 			KnowledgeRetrievalNode knowledgeRetrievalNode = new KnowledgeRetrievalNode();
 			knowledgeRetrievalNode.userPromptKey = this.userPromptKey;
@@ -346,6 +363,7 @@ public class KnowledgeRetrievalNode implements NodeAction {
 			knowledgeRetrievalNode.rerankOptions = this.rerankOptions;
 			knowledgeRetrievalNode.vectorStoreKey = this.vectorStoreKey;
 			knowledgeRetrievalNode.vectorStore = this.vectorStore;
+			knowledgeRetrievalNode.outputKey = this.outputKey;
 			return knowledgeRetrievalNode;
 		}
 

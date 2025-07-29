@@ -20,7 +20,11 @@ import com.alibaba.cloud.ai.graph.KeyStrategy;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.action.AsyncNodeActionWithConfig;
+import com.alibaba.cloud.ai.graph.async.AsyncGenerator;
+import com.alibaba.cloud.ai.graph.async.internal.reactive.GeneratorSubscriber;
+import org.springframework.util.CollectionUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -36,14 +40,43 @@ public class ParallelNode extends Node {
 
 		@Override
 		public CompletableFuture<Map<String, Object>> apply(OverAllState state, RunnableConfig config) {
+			// 使用线程安全的ConcurrentHashMap来避免并发问题
+			Map<String, Object> partialMergedStates = new java.util.concurrent.ConcurrentHashMap<>();
+			Map<String, Object> asyncGenerators = new java.util.concurrent.ConcurrentHashMap<>();
 			var futures = actions.stream().map(action -> action.apply(state, config).thenApply(partialState -> {
-				state.updateState(partialState);
+				partialState.forEach((key, value) -> {
+					if (value instanceof AsyncGenerator<?> || value instanceof GeneratorSubscriber) {
+						((List) asyncGenerators.computeIfAbsent(key, k -> new ArrayList<>())).add(value);
+					}
+					else {
+						// 修复：使用KeyStrategy正确合并状态，而不是直接覆盖
+						KeyStrategy strategy = channels.get(key);
+						if (strategy != null) {
+							// 使用原子操作来确保线程安全
+							partialMergedStates.compute(key, (k, existingValue) -> {
+								return strategy.apply(existingValue, value);
+							});
+						}
+						else {
+							// 如果没有配置KeyStrategy，使用默认的替换策略
+							partialMergedStates.put(key, value);
+						}
+					}
+				});
+				// 移除这行：不在每个并行节点完成后立即更新状态
+				// state.updateState(partialMergedStates);
 				return action;
 			}))
 				// .map( future -> supplyAsync(future::join) )
 				.toList()
 				.toArray(new CompletableFuture[0]);
-			return CompletableFuture.allOf(futures).thenApply((p) -> state.data());
+			return CompletableFuture.allOf(futures).thenApply((p) -> {
+				// 在所有并行节点完成后，统一更新状态
+				if (!CollectionUtils.isEmpty(partialMergedStates)) {
+					state.updateState(partialMergedStates);
+				}
+				return CollectionUtils.isEmpty(asyncGenerators) ? state.data() : asyncGenerators;
+			});
 		}
 
 	}
