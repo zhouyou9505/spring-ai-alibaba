@@ -19,6 +19,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -68,20 +69,36 @@ public class NodeActionFactory {
     private NodeAction createLLMAgent(WorkflowSchema.AgentConfig agentConfig) {
         // 获取配置参数
         String prompt = agentConfig.getInstructions();
-
+        List<ToolConfig> tools = agentConfig.getTools();
+        
+        // 如果工具列表为空，使用空列表
+        if (tools == null) {
+            tools = List.of();
+        }
+        
         //转成toolcallback，过滤掉不存在的工具
-        List<ToolCallback> toolCallbacks = List.of(new MockToolCallback(chatClient, "mock_tool", "模拟工具"));
+        List<ToolCallback> toolCallbacks = tools.stream()
+            .map(toolConfig -> {
+                String toolName = toolConfig.getName();
+                ToolCallback tool = ToolFactory.getTool(toolName);
+                if (tool == null && toolConfig.isAutoMock()) {
+                    // 如果工具不存在且配置为自动mock，创建 MockToolCallback
+                    return new MockToolCallback(chatClient, toolConfig);
+                }
+                return tool;
+            })
+            .filter(tool -> tool != null)
+            .collect(Collectors.toList());
             
         try {
             // 获取输入输出键
-            String inputKey = (String) agentConfig.getConfig().getOrDefault("inputKey", "input");
-            String outputKey = (String) agentConfig.getConfig().getOrDefault("outputKey", "output");
+            String inputKey = agentConfig.getInputKey() != null ? agentConfig.getInputKey() : "input";
+            String outputKey = agentConfig.getOutputKey() != null ? agentConfig.getOutputKey() : "output";
             
             // 创建 LlmNode
             LlmNode llmNode = LlmNode.builder()
                 .chatClient(chatClient)
                 .systemPromptTemplate(prompt)
-                .userPromptTemplate("请处理以下输入：{" + inputKey + "}")
                 .messagesKey("messages")
                 .outputKey(outputKey)
                 .toolCallbacks(toolCallbacks)
@@ -108,7 +125,6 @@ public class NodeActionFactory {
         if (tools == null || tools.isEmpty()) {
             throw new RuntimeException("Agent " + agentConfig.getName() + " 没有配置工具");
         }
-        chatClient.prompt(prompt);
         
         //转成toolcallback，过滤掉不存在的工具
         List<ToolCallback> toolCallbacks = tools.stream()
@@ -135,8 +151,8 @@ public class NodeActionFactory {
             // 编译并返回 NodeAction
             reactAgent.getAndCompileGraph();
             return reactAgent.asNodeAction(
-                (String) agentConfig.getConfig().getOrDefault("inputKey", "input"),
-                (String) agentConfig.getConfig().getOrDefault("outputKey", "output")
+                agentConfig.getInputKey() != null ? agentConfig.getInputKey() : "input",
+                agentConfig.getOutputKey() != null ? agentConfig.getOutputKey() : "output"
             );
             
         } catch (GraphStateException e) {
@@ -186,8 +202,8 @@ public class NodeActionFactory {
             // 编译并返回 NodeAction
             reactAgentWithHuman.getAndCompileGraph();
             NodeActionWithConfig nodeActionWithConfig = reactAgentWithHuman.asNodeAction(
-                (String) agentConfig.getConfig().getOrDefault("inputKey", "input"),
-                (String) agentConfig.getConfig().getOrDefault("outputKey", "output")
+                agentConfig.getInputKey() != null ? agentConfig.getInputKey() : "input",
+                agentConfig.getOutputKey() != null ? agentConfig.getOutputKey() : "output"
             );
             
             // 将 NodeActionWithConfig 适配为 NodeAction
@@ -249,10 +265,10 @@ public class NodeActionFactory {
                 public Map<String, Object> apply(OverAllState state) throws Exception {
                     // 这里需要根据实际需求实现
                     // 暂时返回一个简单的实现
-                    String inputKey = (String) agentConfig.getConfig().getOrDefault("inputKey", "input");
-                    String outputKey = (String) agentConfig.getConfig().getOrDefault("outputKey", "output");
+                    String inputKey = agentConfig.getInputKey() != null ? agentConfig.getInputKey() : "input";
+                    String outputKey = agentConfig.getOutputKey() != null ? agentConfig.getOutputKey() : "output";
                     
-                    Object input = state.value(inputKey).orElse("");
+                    Object input = processInput(state, inputKey);
                     return Map.of(outputKey, "ReflectAgent processed: " + input);
                 }
             };
@@ -263,16 +279,48 @@ public class NodeActionFactory {
     }
     
     /**
+     * 智能处理输入 - 参考 LangChain 的设计模式
+     * 支持 String 和 Message 类型的输入
+     */
+    private Object processInput(OverAllState state, String inputKey) {
+        Optional<Object> inputValue = state.value(inputKey);
+        if (!inputValue.isPresent()) {
+            return "";
+        }
+        
+        Object input = inputValue.get();
+        
+        // 如果输入已经是 Message 类型，直接返回
+        if (input instanceof org.springframework.ai.chat.messages.Message) {
+            return input;
+        }
+        
+        // 如果输入是 String 类型，转换为 UserMessage
+        if (input instanceof String) {
+            return new org.springframework.ai.chat.messages.UserMessage((String) input);
+        }
+        
+        // 如果输入是 List<Message>，直接返回
+        if (input instanceof List && !((List<?>) input).isEmpty() && 
+            ((List<?>) input).get(0) instanceof org.springframework.ai.chat.messages.Message) {
+            return input;
+        }
+        
+        // 其他类型，转换为字符串后创建 UserMessage
+        return new org.springframework.ai.chat.messages.UserMessage(input.toString());
+    }
+    
+    /**
      * 创建图形动作（用于ReflectAgent）
      */
     private NodeAction createGraphAction(WorkflowSchema.AgentConfig agentConfig, List<ToolCallback> tools) {
         return new NodeAction() {
             @Override
             public Map<String, Object> apply(OverAllState state) throws Exception {
-                String inputKey = (String) agentConfig.getConfig().getOrDefault("inputKey", "input");
-                String outputKey = (String) agentConfig.getConfig().getOrDefault("outputKey", "output");
+                String inputKey = agentConfig.getInputKey() != null ? agentConfig.getInputKey() : "input";
+                String outputKey = agentConfig.getOutputKey() != null ? agentConfig.getOutputKey() : "output";
                 
-                Object input = state.value(inputKey).orElse("");
+                Object input = processInput(state, inputKey);
                 // 这里可以添加工具调用逻辑
                 return Map.of(outputKey, "Graph processed: " + input);
             }
@@ -286,10 +334,10 @@ public class NodeActionFactory {
         return new NodeAction() {
             @Override
             public Map<String, Object> apply(OverAllState state) throws Exception {
-                String inputKey = (String) agentConfig.getConfig().getOrDefault("inputKey", "input");
-                String outputKey = (String) agentConfig.getConfig().getOrDefault("outputKey", "output");
+                String inputKey = agentConfig.getInputKey() != null ? agentConfig.getInputKey() : "input";
+                String outputKey = agentConfig.getOutputKey() != null ? agentConfig.getOutputKey() : "output";
                 
-                Object input = state.value(inputKey).orElse("");
+                Object input = processInput(state, inputKey);
                 return Map.of(outputKey, "Reflection on: " + input);
             }
         };

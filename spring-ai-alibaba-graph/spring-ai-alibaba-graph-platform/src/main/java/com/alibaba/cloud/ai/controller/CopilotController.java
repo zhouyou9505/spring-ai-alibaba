@@ -122,7 +122,7 @@ public class CopilotController {
         promptBuilder.append(loadWorkflowSchemaDefinition()).append("\n\n");
         
         // 添加示例工作流
-        promptBuilder.append("## Example Workflow (Blog Writing):\n");
+        promptBuilder.append("## Example Workflow:\n");
         promptBuilder.append(loadBlogWritingWorkflowExample()).append("\n\n");
         
         // 添加当前工作流配置（如果存在）
@@ -212,7 +212,7 @@ public class CopilotController {
      */
     private String loadBlogWritingWorkflowExample() {
         try {
-            ClassPathResource resource = new ClassPathResource("examples/blog-writing-workflow.json");
+            ClassPathResource resource = new ClassPathResource("examples/multi-agent-types-demo.json");
             return new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
             logger.warn("无法加载博客写作工作流示例文件", e);

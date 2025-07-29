@@ -70,21 +70,15 @@ public class WorkflowController {
      * 运行工作流
      */
     @PostMapping("/{workflowId}/run")
-    public Map<String, Object> runWorkflow(@PathVariable String workflowId,
+    public Map<String, Object> runWorkflow(@PathVariable String workflowId,WorkflowSchema workflowSchema,
                                           @RequestBody Map<String, Object> input) {
         Map<String, Object> response = new HashMap<>();
 
-        try {
-            Map<String, Object> result = flowRunner.runWorkflow(workflowId, input);
-            response.put("success", true);
-            response.put("workflowId", workflowId);
-            response.put("result", result);
-        } catch (Exception e) {
-            response.put("success", false);
-            response.put("message", "工作流运行失败: " + e.getMessage());
-            response.put("error", e.getClass().getSimpleName());
+        if (workflowId == null){
+            flowRunner.runWorkflow(workflowSchema,input);
+        }else {
+            flowRunner.runWorkflow(workflowId, input);
         }
-
         return response;
     }
 

@@ -115,8 +115,8 @@ public class WorkflowSchema {
         private String instructions; // Agent的具体指令
         private String model; // 使用的模型
         private Map<String, Object> config;
-        private Map<String, Object> inputMapping;
-        private Map<String, Object> outputMapping;
+        private String inputKey; // 输入键名
+        private String outputKey; // 输出键名
         private AgentOptions options;
         private List<ToolConfig> tools; // 多Agent协作工具
 
@@ -125,7 +125,7 @@ public class WorkflowSchema {
 
         public AgentConfig(String agentId, String name, String type, String description,
                            String instructions, String model, Map<String, Object> config,
-                           Map<String, Object> inputMapping, Map<String, Object> outputMapping,
+                           String inputKey, String outputKey,
                            AgentOptions options, List<ToolConfig> tools) {
             this.agentId = agentId;
             this.name = name;
@@ -134,13 +134,28 @@ public class WorkflowSchema {
             this.instructions = instructions;
             this.model = model;
             this.config = config;
-            this.inputMapping = inputMapping;
-            this.outputMapping = outputMapping;
+            this.inputKey = inputKey;
+            this.outputKey = outputKey;
             this.options = options;
             this.tools = tools;
         }
 
+        // Getters and Setters for inputKey and outputKey
+        public String getInputKey() {
+            return inputKey;
+        }
 
+        public void setInputKey(String inputKey) {
+            this.inputKey = inputKey;
+        }
+
+        public String getOutputKey() {
+            return outputKey;
+        }
+
+        public void setOutputKey(String outputKey) {
+            this.outputKey = outputKey;
+        }
     }
 
     /**

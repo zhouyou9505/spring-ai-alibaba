@@ -34,7 +34,7 @@
           "type": {
             "type": "string",
             "enum": ["llm", "react", "react_with_human", "reflect"],
-            "description": "Agent类型：llm（LLM Agent）、react（ReactAgent）、react_with_human（ReactAgentWithHuman）、reflect（ReflectAgent）"
+            "description": "Agent类型：llm（简单LLM对话）、react（ReAct模式，支持工具调用）、react_with_human（支持人工干预）、reflect（具备反思优化能力）"
           },
           "description": {
             "type": "string",
@@ -53,19 +53,13 @@
             "description": "Agent的具体配置",
             "additionalProperties": true
           },
-          "inputMapping": {
-            "type": "object",
-            "description": "输入数据映射",
-            "additionalProperties": {
-              "type": "string"
-            }
+          "inputKey": {
+            "type": "string",
+            "description": "输入键名"
           },
-          "outputMapping": {
-            "type": "object",
-            "description": "输出数据映射",
-            "additionalProperties": {
-              "type": "string"
-            }
+          "outputKey": {
+            "type": "string",
+            "description": "输出键名"
           },
           "options": {
             "type": "object",
@@ -461,5 +455,50 @@
   },
   "required": ["workflowId", "name", "agents", "edges"],
   "additionalProperties": false,
-  "$schema": "http://json-schema.org/draft-07/schema#"
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "agentTypes": {
+      "description": "Agent类型详细说明",
+      "llm": {
+        "description": "简单LLM对话Agent",
+        "特点": ["直接与LLM对话", "无工具调用", "适合简单问答"],
+        "适用场景": ["客服对话", "内容生成", "简单咨询"],
+        "配置建议": {
+          "tools": "通常为空或简单工具",
+          "maxIterations": "1",
+          "instructions": "直接的用户指令"
+        }
+      },
+      "react": {
+        "description": "ReAct模式Agent，支持工具调用",
+        "特点": ["推理+行动循环", "支持工具调用", "记忆持久化", "流式输出"],
+        "适用场景": ["自动问答", "工具调用", "任务执行", "数据分析"],
+        "配置建议": {
+          "tools": "配置相关工具列表",
+          "maxIterations": "5-10",
+          "instructions": "包含推理和行动步骤的指令"
+        }
+      },
+      "react_with_human": {
+        "description": "支持人工干预的ReAct Agent",
+        "特点": ["ReAct基础上增加人工节点", "支持中断和恢复", "审批机制"],
+        "适用场景": ["医疗诊断建议", "金融审批", "法律文档生成", "合规审核"],
+        "配置建议": {
+          "tools": "配置相关工具",
+          "maxIterations": "8-15",
+          "instructions": "包含人工确认点的指令"
+        }
+      },
+      "reflect": {
+        "description": "具备反思优化能力的Agent",
+        "特点": ["生成→评估→改进闭环", "双节点设计", "多轮迭代", "自动记录反思"],
+        "适用场景": ["高质量内容生成", "代码生成", "错误修正", "知识问答优化"],
+        "配置建议": {
+          "tools": "配置生成和评估工具",
+          "maxIterations": "3-5",
+          "instructions": "包含反思和改进步骤的指令"
+        }
+      }
+    }
+  }
 }

@@ -56,7 +56,7 @@ public class FlowRunner {
         CompiledGraph compiledGraph = buildGraph(schema);
         compiledGraphs.put(schema.getWorkflowId(), compiledGraph);
 
-        runWorkflow(schema.getWorkflowId(), Map.of("message","什么考试简单  可以抵税  计算机专业"));
+        runWorkflow(schema.getWorkflowId(), Map.of("user_message","帮我翻译:你吃饭了吗"));
     }
 
     /**
@@ -74,6 +74,16 @@ public class FlowRunner {
         logger.info("工作流 {} 运行完成", workflowId);
         return result.get().data();
     }
+
+    @SneakyThrows
+    public Map<String, Object> runWorkflow(WorkflowSchema workflowSchema, Map<String, Object> input) {
+
+        CompiledGraph compiledGraph = buildGraph(workflowSchema);
+
+        Optional<OverAllState> result = compiledGraph.invoke(input);
+        return result.get().data();
+    }
+
 
     /**
      * 构建图形化工作流
@@ -120,15 +130,13 @@ public class FlowRunner {
             // 为所有Agent注册默认的键和策略
             if (schema.getAgents() != null) {
                 for (WorkflowSchema.AgentConfig agent : schema.getAgents()) {
-                    if (agent.getInputMapping() != null) {
-                        for (Object value : agent.getInputMapping().values()) {
-                            state.registerKeyAndStrategy(value.toString(), new ReplaceStrategy());
-                        }
+                    // 注册 inputKey
+                    if (agent.getInputKey() != null) {
+                        state.registerKeyAndStrategy(agent.getInputKey(), new ReplaceStrategy());
                     }
-                    if (agent.getOutputMapping() != null) {
-                        for (Object value : agent.getOutputMapping().values()) {
-                            state.registerKeyAndStrategy(value.toString(), new ReplaceStrategy());
-                        }
+                    // 注册 outputKey
+                    if (agent.getOutputKey() != null) {
+                        state.registerKeyAndStrategy(agent.getOutputKey(), new ReplaceStrategy());
                     }
                 }
             }
@@ -219,11 +227,13 @@ public class FlowRunner {
                         logger.warn("Agent {} 同时有条件边和普通边，优先处理条件边", fromAgent);
                     }
                     
-                    // 创建复合条件边动作
+                    // 创建条件边动作
                     AsyncEdgeAction compositeEdgeAction = createCompositeConditionEdgeAction(conditionalEdges);
                     
                     // 构建目标映射
                     Map<String, String> nextAgents = new HashMap<>();
+                    
+                    // 添加所有条件边到映射中
                     for (WorkflowSchema.EdgeConfig edgeConfig : conditionalEdges) {
                         String toAgent = edgeConfig.getToAgentId();
                         String conditionKey = edgeConfig.getCondition();
@@ -235,19 +245,29 @@ public class FlowRunner {
                         }
                     }
                     
-                    // 添加默认分支（如果有普通边）
+                    // 确保有默认分支
+                    String defaultToAgent = null;
                     if (!normalEdges.isEmpty()) {
-                        String defaultToAgent = normalEdges.get(0).getToAgentId();
-                        if (END.contains(defaultToAgent)) {
-                            nextAgents.put("default", END);
-                        } else {
-                            nextAgents.put("default", defaultToAgent);
-                        }
+                        // 如果有普通边，使用第一个作为默认分支
+                        defaultToAgent = normalEdges.get(0).getToAgentId();
+                    } else if (!conditionalEdges.isEmpty()) {
+                        // 如果没有普通边，使用第一个条件边的目标作为默认分支
+                        defaultToAgent = conditionalEdges.get(0).getToAgentId();
+                    } else {
+                        // 如果没有任何边，使用 END
+                        defaultToAgent = END;
                     }
                     
+                    if (END.contains(defaultToAgent)) {
+                        nextAgents.put("default", END);
+                    } else {
+                        nextAgents.put("default", defaultToAgent);
+                    }
+                    
+                    logger.debug("添加条件边: {} -> {} (条件边数量: {}, 默认分支: {})",
+                            fromAgent, nextAgents, conditionalEdges.size(), defaultToAgent);
+                    
                     graph.addConditionalEdges(fromAgent, compositeEdgeAction, nextAgents);
-                    logger.debug("添加复合条件边: {} -> {} (条件边数量: {})",
-                            fromAgent, nextAgents, conditionalEdges.size());
                 }
             }
         }
@@ -256,51 +276,25 @@ public class FlowRunner {
     /**
      * 创建条件边动作
      */
-    private AsyncEdgeAction createConditionEdgeAction(String condition) {
-        return edge_async(state -> {
-            try {
-                // 解析 JSON 对象格式的条件
-                // 格式: {"key": "value"}
-                if (condition.startsWith("{") && condition.endsWith("}")) {
-                    // 使用 JSON 解析
-                    Map<String, String> conditionMap = parseJsonToMap(condition);
-                    if (!conditionMap.isEmpty()) {
-                        // 获取第一个条件
-                        Map.Entry<String, String> entry = conditionMap.entrySet().iterator().next();
-                        String key = entry.getKey();
-                        String expectedValue = entry.getValue();
-                        
-                        // 从状态中获取值
-                        Optional<Object> stateValue = state.value(key);
-                        if (stateValue.isPresent()) {
-                            String actualValue = stateValue.get().toString();
-                            return actualValue.equals(expectedValue) ? "true" : "false";
-                        }
-                        return "false";
-                    }
-                }
-                
-            } catch (Exception e) {
-                logger.warn("解析条件失败: {}", condition, e);
-            }
-            
-            return "false"; // 默认返回 false
-        });
-    }
-
-    /**
-     * 创建复合条件边动作
-     */
     private AsyncEdgeAction createCompositeConditionEdgeAction(List<WorkflowSchema.EdgeConfig> conditionalEdges) {
         return edge_async(state -> {
+            logger.debug("评估条件边，条件数量: {}", conditionalEdges.size());
+
+            // fixme 你需要把 用户问题、和需要返回的模型结果告诉模型，然后模型返回结果，然后根据结果进行判断
+
             // 按顺序评估每个条件
             for (WorkflowSchema.EdgeConfig edgeConfig : conditionalEdges) {
                 String condition = edgeConfig.getCondition();
+                logger.debug("评估条件: {}", condition);
+                
                 if (evaluateCondition(condition, state)) {
-                    // 如果条件为真，返回该条件的键
+                    logger.debug("条件为真，返回: {}", condition);
+                    // 如果条件为真，返回该条件的键（完整的条件字符串）
                     return condition;
                 }
             }
+            
+            logger.debug("所有条件都为假，返回默认分支");
             // 如果所有条件都为假，返回默认分支
             return "default";
         });
@@ -311,30 +305,39 @@ public class FlowRunner {
      */
     private boolean evaluateCondition(String condition, OverAllState state) {
         try {
+            logger.debug("开始评估条件: {}", condition);
+            // fixme 你需要把 用户问题、和需要返回的模型结果告诉模型，然后模型返回结果，然后根据结果进行判断
+
             // 解析 JSON 对象格式的条件
             // 格式: {"key": "value"}
-            if (condition.startsWith("{") && condition.endsWith("}")) {
-                Map<String, String> conditionMap = parseJsonToMap(condition);
-                if (!conditionMap.isEmpty()) {
-                    // 获取第一个条件
-                    Map.Entry<String, String> entry = conditionMap.entrySet().iterator().next();
-                    String key = entry.getKey();
-                    String expectedValue = entry.getValue();
-                    
-                    // 从状态中获取值
-                    Optional<Object> stateValue = state.value(key);
-                    if (stateValue.isPresent()) {
-                        String actualValue = stateValue.get().toString();
-                        return actualValue.equals(expectedValue);
-                    }
+            Map<String, String> conditionMap = parseJsonToMap(condition);
+            logger.debug("解析的条件映射: {}", conditionMap);
+
+            if (!conditionMap.isEmpty()) {
+                // 获取第一个条件
+                Map.Entry<String, String> entry = conditionMap.entrySet().iterator().next();
+                String key = entry.getKey();
+                String expectedValue = entry.getValue();
+
+                logger.debug("检查状态键: {}, 期望值: {}", key, expectedValue);
+
+                // 从状态中获取值
+                Optional<Object> stateValue = state.value(key);
+                if (stateValue.isPresent()) {
+                    String actualValue = stateValue.get().toString();
+                    boolean result = actualValue.equals(expectedValue);
+                    logger.debug("状态值: {}, 比较结果: {}", actualValue, result);
+                    return result;
+                } else {
+                    logger.debug("状态中未找到键: {}", key);
                     return false;
                 }
             }
-            
         } catch (Exception e) {
             logger.warn("解析条件失败: {}", condition, e);
         }
         
+        logger.debug("条件评估失败，返回 false");
         // 默认返回 false
         return false;
     }

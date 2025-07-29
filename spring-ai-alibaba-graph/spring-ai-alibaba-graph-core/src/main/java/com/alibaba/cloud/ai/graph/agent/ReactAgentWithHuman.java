@@ -364,9 +364,23 @@ public class ReactAgentWithHuman {
 			}
 			else {
 				// prepare input for child graph
-				String input = (String) parentState.value(inputKeyFromParent).orElseThrow();
-				Message message = new UserMessage(input);
-				List<Message> messages = List.of(message);
+				Object input = parentState.value(inputKeyFromParent).orElseThrow();
+				List<Message> messages;
+				
+				// 智能处理不同类型的输入
+				if (input instanceof org.springframework.ai.chat.messages.Message) {
+					// 如果输入已经是 Message 类型，直接使用
+					messages = List.of((org.springframework.ai.chat.messages.Message) input);
+				} else if (input instanceof List && !((List<?>) input).isEmpty() && 
+					((List<?>) input).get(0) instanceof org.springframework.ai.chat.messages.Message) {
+					// 如果输入是 List<Message>，直接使用
+					messages = (List<Message>) input;
+				} else {
+					// 其他类型，转换为字符串后创建 UserMessage
+					String inputString = input.toString();
+					Message message = new UserMessage(inputString);
+					messages = List.of(message);
+				}
 
 				// invoke child graph
 				childState = childGraph.invoke(Map.of("messages", messages), subConfig).get();

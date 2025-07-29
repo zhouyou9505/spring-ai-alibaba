@@ -8,22 +8,25 @@ flowchart TD
     classification_agent("classification_agent")
     data_agent("data_agent")
     translation_agent("translation_agent")
-    analysis_agent("analysis_agent")
-    report_agent("report_agent")
+    data_analysis_agent("data_analysis_agent")
+    report_generation_agent("report_generation_agent")
     condition1{"check state"}
     __START__:::__START__ --> reception_agent:::reception_agent
-    analysis_agent:::analysis_agent --> report_agent:::report_agent
-    data_agent:::data_agent --> report_agent:::report_agent
+    data_agent:::data_agent --> report_generation_agent:::report_generation_agent
+    data_analysis_agent:::data_analysis_agent --> report_generation_agent:::report_generation_agent
     reception_agent:::reception_agent --> classification_agent:::classification_agent
-    translation_agent:::translation_agent --> report_agent:::report_agent
+    translation_agent:::translation_agent --> report_generation_agent:::report_generation_agent
     classification_agent:::classification_agent -.-> condition1:::condition1
-    condition1:::condition1 -.->|problem_type == 'math'| data_agent:::data_agent
-%%	classification_agent:::classification_agent -.->|problem_type == 'math'| data_agent:::data_agent
-    condition1:::condition1 -.->|problem_type == 'analysis'| analysis_agent:::analysis_agent
-%%	classification_agent:::classification_agent -.->|problem_type == 'analysis'| analysis_agent:::analysis_agent
-    condition1:::condition1 -.->|problem_type == 'translation'| translation_agent:::translation_agent
-%%	classification_agent:::classification_agent -.->|problem_type == 'translation'| translation_agent:::translation_agent
-    report_agent:::report_agent --> __END__:::__END__
+    condition1:::condition1 -.->|classification_output == '数学'| data_agent:::data_agent
+%%	classification_agent:::classification_agent -.->|classification_output == '数学'| data_agent:::data_agent
+    condition1:::condition1 -.->|classification_output == '数据分析'| data_analysis_agent:::data_analysis_agent
+%%	classification_agent:::classification_agent -.->|classification_output == '数据分析'| data_analysis_agent:::data_analysis_agent
+    condition1:::condition1 -.->|default| data_agent:::data_agent
+%%	classification_agent:::classification_agent -.->|default| data_agent:::data_agent
+    condition1:::condition1 -.->|classification_output == '翻译'| translation_agent:::translation_agent
+%%	classification_agent:::classification_agent -.->|classification_output == '翻译'| translation_agent:::translation_agent
+    report_generation_agent:::report_generation_agent --> __END__:::__END__
 
     classDef ___START__ fill:black,stroke-width:1px,font-size:xx-small;
     classDef ___END__ fill:black,stroke-width:1px,font-size:xx-small;
+
