@@ -231,8 +231,6 @@ public class FlowRunner {
                     }
                     
                     // 创建条件边动作
-                    AsyncEdgeAction compositeEdgeAction = createCompositeConditionEdgeAction(conditionalEdges);
-                    
                     // 构建目标映射
                     Map<String, String> nextAgents = new HashMap<>();
                     
@@ -273,37 +271,39 @@ public class FlowRunner {
                     logger.debug("添加条件边: {} -> {} (条件边数量: {}, 默认分支: {})",
                             fromAgent, nextAgents, conditionalEdges.size(), defaultToAgent);
                     
-                    graph.addConditionalEdges(fromAgent, compositeEdgeAction, nextAgents);
+                    graph.addConditionalEdges(fromAgent,
+                            edge_async(state -> {
+                                logger.debug("评估条件边，条件数量: {}", conditionalEdges.size());
+
+                                // 按照教程方式：从第一个条件边中获取条件键
+                                if (!conditionalEdges.isEmpty()) {
+                                    WorkflowSchema.EdgeConfig firstEdge = conditionalEdges.get(0);
+                                    Map<String, Object> firstCondition = firstEdge.getCondition();
+                                    
+                                    if (firstCondition != null && !firstCondition.isEmpty()) {
+                                        // 获取条件键（如 "request_category"）
+                                        String conditionKey = firstCondition.keySet().iterator().next();
+                                        logger.debug("检查状态键: {}", conditionKey);
+                                        
+                                        // 从状态中获取值
+                                        Optional<Object> stateValue = state.value(conditionKey);
+                                        if (stateValue.isPresent()) {
+                                            return stateValue.get().toString();
+                                        }
+                                    }
+                                }
+
+                                logger.debug("没有找到匹配条件，返回默认分支");
+                                // 如果没有找到匹配的条件，返回默认分支
+                                return "default";
+                            })
+                            , nextAgents);
                 }
             }
         }
     }
 
-    /**
-     * 创建条件边动作
-     */
-    private AsyncEdgeAction createCompositeConditionEdgeAction(List<WorkflowSchema.EdgeConfig> conditionalEdges) {
-        return edge_async(state -> {
-            logger.debug("评估条件边，条件数量: {}", conditionalEdges.size());
 
-            // 按顺序评估每个条件
-            for (WorkflowSchema.EdgeConfig edgeConfig : conditionalEdges) {
-                Map<String, Object> condition = edgeConfig.getCondition();
-                logger.debug("评估条件: {}", condition);
-                
-                if (evaluateCondition(condition, state)) {
-                    logger.debug("条件为真，返回: {}", condition);
-                    // 如果条件为真，返回该条件的字符串表示
-                    return conditionToString(condition);
-                }
-            }
-            
-            logger.debug("所有条件都为假，返回默认分支");
-            // 如果所有条件都为假，返回默认分支
-            return "default";
-        });
-    }
-    
     /**
      * 评估条件 - 支持 Map 格式的条件
      */
@@ -411,7 +411,8 @@ public class FlowRunner {
         String key = entry.getKey();
         String value = entry.getValue().toString();
         
-        return String.format("{\"%s\":\"%s\"}", key, value);
+        // 返回简洁的格式，如 "math", "translation", "data_analysis"
+        return value;
     }
 
     /**
