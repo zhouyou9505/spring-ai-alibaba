@@ -99,10 +99,7 @@ public class CopilotController {
         final int maxOptimizationAttempts = 3;
 
 //        betterWorkflowSchema(newSchema, userRequest);
-        
-        if (optimizationAttempts >= maxOptimizationAttempts) {
-            logger.warn("工作流优化达到最大尝试次数，使用当前配置");
-        }
+
 
         // 保存或更新工作流
         String finalWorkflowId = newSchema.getWorkflowId();

@@ -176,7 +176,7 @@ public class NodeActionFactory {
     }
 
     /**
-     * 创建 ReactAgentWithHuman
+     * 创建 ReactAgentWithHuman 【先不用考虑兼容ReactAgentWithHuman】
      */
     private NodeAction createReactAgentWithHuman(WorkflowSchema.AgentConfig agentConfig, ChatModel chatModel) {
 
@@ -249,7 +249,7 @@ public class NodeActionFactory {
     }
 
     /**
-     * 创建 ReflectAgent
+     * 创建 ReflectAgent【先不用考虑兼容ReflectAgent】
      */
     private NodeAction createReflectAgent(WorkflowSchema.AgentConfig agentConfig, ChatModel chatModel) {
         // 获取配置参数

@@ -38,32 +38,6 @@ When creating or editing agents, you should choose the appropriate agent type ba
 
 The system now supports multiple input types for agents, inspired by LangChain's design patterns:
 
-### Supported Input Types:
-
-1. **String Input**: Simple text input
-   ```json
-   {
-     "inputKey": "user_message",
-     "outputKey": "response"
-   }
-   ```
-
-2. **Message Object**: Single message object
-   ```json
-   {
-     "inputKey": "user_message",
-     "outputKey": "response"
-   }
-   ```
-
-3. **Message List**: List of message objects for conversation history
-   ```json
-   {
-     "inputKey": "conversation_history",
-     "outputKey": "response"
-   }
-   ```
-
 ### Input Processing Logic:
 
 The system automatically detects and processes different input types:
@@ -117,7 +91,7 @@ When creating agents, you MUST specify output constraints and format requirement
      "config": {
        "maxIterations": 1
      },
-     "inputKey": "user_input",
+     "inputKeys": ["user_input"],
      "outputKey": "classification_result"
    }
    ```
@@ -134,7 +108,7 @@ When creating agents, you MUST specify output constraints and format requirement
      "config": {
        "maxIterations": 1
      },
-     "inputKey": "request_details",
+     "inputKeys": ["request_details"],
      "outputKey": "approval_decision"
    }
    ```
@@ -151,7 +125,7 @@ When creating agents, you MUST specify output constraints and format requirement
      "config": {
        "maxIterations": 3
      },
-     "inputKey": "raw_data",
+     "inputKeys": ["raw_data"],
      "outputKey": "processed_data",
      "tools": [
        {"name": "data_analyzer"}
@@ -257,7 +231,7 @@ When creating a new agent, strictly follow the format of this example agent. The
   "config": {
     "maxIterations": 1
   },
-  "inputKey": "user_message",
+  "inputKeys": ["user_message"],
   "outputKey": "chat_response",
   "tools": []
 }
@@ -275,7 +249,7 @@ When creating a new agent, strictly follow the format of this example agent. The
   "config": {
     "maxIterations": 8
   },
-  "inputKey": "analysis_request",
+  "inputKeys": ["analysis_request"],
   "outputKey": "analysis_result",
   "tools": [
     {"name": "data_processor"},
@@ -296,7 +270,7 @@ When creating a new agent, strictly follow the format of this example agent. The
   "config": {
     "maxIterations": 12
   },
-  "inputKey": "approval_request",
+  "inputKeys": ["approval_request"],
   "outputKey": "approval_result",
   "tools": [
     {"name": "request_processor"}
@@ -317,7 +291,7 @@ When creating a new agent, strictly follow the format of this example agent. The
   "config": {
     "maxIterations": 1
   },
-  "inputKey": "user_request",
+  "inputKeys": ["user_request"],
   "outputKey": "request_category",
   "tools": []
 }
