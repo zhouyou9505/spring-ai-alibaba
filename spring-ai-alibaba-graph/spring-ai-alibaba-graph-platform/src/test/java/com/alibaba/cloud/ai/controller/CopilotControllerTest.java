@@ -71,12 +71,12 @@ class CopilotControllerTest {
                 "  }, {\n" +
                 "    \"agentId\" : \"request_classifier\",\n" +
                 "    \"config\" : {\n" +
-                "      \"maxIterations\" : 5\n" +
+                "      \"maxIterations\" : 1\n" +
                 "    },\n" +
                 "    \"description\" : \"将用户请求分类到特定类别\",\n" +
                 "    \"inputKey\" : \"reception_output\",\n" +
                 "    \"inputKeys\" : [ \"reception_output\" ],\n" +
-                "    \"instructions\" : \"你是一个请求分类器。分析用户请求并将其分类为以下类别之一：'math', 'translation', 'data_analysis'。使用分类工具进行分类。你必须只回复类别名称，不要其他内容。有效回复：'math', 'translation', 'data_analysis'。\",\n" +
+                "    \"instructions\" : \"你是一个请求分类器。使用分类工具分析用户请求并将其分类为以下类别之一：'math', 'translation', 'data_analysis'。你必须只回复类别名称，不要其他内容。有效回复：'math', 'translation', 'data_analysis'。\",\n" +
                 "    \"model\" : \"qwen-turbo\",\n" +
                 "    \"name\" : \"请求分类Agent\",\n" +
                 "    \"options\" : {\n" +
@@ -91,19 +91,8 @@ class CopilotControllerTest {
                 "    },\n" +
                 "    \"outputKey\" : \"request_category\",\n" +
                 "    \"tools\" : [ {\n" +
-                "      \"autoMock\" : false,\n" +
-                "      \"description\" : \"用于分类请求的工具\",\n" +
-                "      \"name\" : \"category_tool\",\n" +
-                "      \"parameters\" : {\n" +
-                "        \"type\" : \"object\",\n" +
-                "        \"properties\" : {\n" +
-                "          \"request\" : {\n" +
-                "            \"type\" : \"string\",\n" +
-                "            \"description\" : \"用户请求\"\n" +
-                "          }\n" +
-                "        },\n" +
-                "        \"required\" : [ \"request\" ]\n" +
-                "      }\n" +
+                "      \"autoMock\" : true,\n" +
+                "      \"name\" : \"classification_tool\"\n" +
                 "    } ],\n" +
                 "    \"type\" : \"react\"\n" +
                 "  }, {\n" +
@@ -111,10 +100,10 @@ class CopilotControllerTest {
                 "    \"config\" : {\n" +
                 "      \"maxIterations\" : 5\n" +
                 "    },\n" +
-                "    \"description\" : \"处理数学相关问题\",\n" +
+                "    \"description\" : \"处理数学问题\",\n" +
                 "    \"inputKey\" : \"user_request\",\n" +
                 "    \"inputKeys\" : [ \"user_request\", \"request_category\" ],\n" +
-                "    \"instructions\" : \"你是一个数学专家。处理数学问题并提供解决方案。返回分析结果。\",\n" +
+                "    \"instructions\" : \"你是一个数学专家。处理数学问题并提供解决方案。返回数学问题的结果。\",\n" +
                 "    \"model\" : \"qwen-turbo\",\n" +
                 "    \"name\" : \"数学Agent\",\n" +
                 "    \"options\" : {\n" +
@@ -129,19 +118,8 @@ class CopilotControllerTest {
                 "    },\n" +
                 "    \"outputKey\" : \"math_solution\",\n" +
                 "    \"tools\" : [ {\n" +
-                "      \"autoMock\" : false,\n" +
-                "      \"description\" : \"用于处理数学问题的工具\",\n" +
-                "      \"name\" : \"math_tool\",\n" +
-                "      \"parameters\" : {\n" +
-                "        \"type\" : \"object\",\n" +
-                "        \"properties\" : {\n" +
-                "          \"problem\" : {\n" +
-                "            \"type\" : \"string\",\n" +
-                "            \"description\" : \"数学问题\"\n" +
-                "          }\n" +
-                "        },\n" +
-                "        \"required\" : [ \"problem\" ]\n" +
-                "      }\n" +
+                "      \"autoMock\" : true,\n" +
+                "      \"name\" : \"math_solver\"\n" +
                 "    } ],\n" +
                 "    \"type\" : \"react\"\n" +
                 "  }, {\n" +
@@ -149,10 +127,10 @@ class CopilotControllerTest {
                 "    \"config\" : {\n" +
                 "      \"maxIterations\" : 5\n" +
                 "    },\n" +
-                "    \"description\" : \"处理翻译相关问题\",\n" +
+                "    \"description\" : \"处理翻译问题\",\n" +
                 "    \"inputKey\" : \"user_request\",\n" +
                 "    \"inputKeys\" : [ \"user_request\", \"request_category\" ],\n" +
-                "    \"instructions\" : \"你是一个翻译专家。处理翻译问题并提供翻译结果。返回翻译结果。\",\n" +
+                "    \"instructions\" : \"你是一个翻译专家。处理翻译请求并提供翻译结果。返回翻译后的文本。\",\n" +
                 "    \"model\" : \"qwen-turbo\",\n" +
                 "    \"name\" : \"翻译Agent\",\n" +
                 "    \"options\" : {\n" +
@@ -165,25 +143,10 @@ class CopilotControllerTest {
                 "      \"timeout\" : 30000,\n" +
                 "      \"toggleAble\" : true\n" +
                 "    },\n" +
-                "    \"outputKey\" : \"translation_result\",\n" +
+                "    \"outputKey\" : \"translated_text\",\n" +
                 "    \"tools\" : [ {\n" +
-                "      \"autoMock\" : false,\n" +
-                "      \"description\" : \"用于处理翻译问题的工具\",\n" +
-                "      \"name\" : \"translation_tool\",\n" +
-                "      \"parameters\" : {\n" +
-                "        \"type\" : \"object\",\n" +
-                "        \"properties\" : {\n" +
-                "          \"text\" : {\n" +
-                "            \"type\" : \"string\",\n" +
-                "            \"description\" : \"需要翻译的文本\"\n" +
-                "          },\n" +
-                "          \"target_language\" : {\n" +
-                "            \"type\" : \"string\",\n" +
-                "            \"description\" : \"目标语言\"\n" +
-                "          }\n" +
-                "        },\n" +
-                "        \"required\" : [ \"text\", \"target_language\" ]\n" +
-                "      }\n" +
+                "      \"autoMock\" : true,\n" +
+                "      \"name\" : \"translator\"\n" +
                 "    } ],\n" +
                 "    \"type\" : \"react\"\n" +
                 "  }, {\n" +
@@ -191,10 +154,10 @@ class CopilotControllerTest {
                 "    \"config\" : {\n" +
                 "      \"maxIterations\" : 5\n" +
                 "    },\n" +
-                "    \"description\" : \"处理数据分析相关问题\",\n" +
+                "    \"description\" : \"处理数据分析问题\",\n" +
                 "    \"inputKey\" : \"user_request\",\n" +
                 "    \"inputKeys\" : [ \"user_request\", \"request_category\" ],\n" +
-                "    \"instructions\" : \"你是一个数据分析专家。处理数据分析问题并提供分析结果。返回分析结果。\",\n" +
+                "    \"instructions\" : \"你是一个数据分析专家。处理数据分析请求并提供分析结果。返回分析报告。\",\n" +
                 "    \"model\" : \"qwen-turbo\",\n" +
                 "    \"name\" : \"数据分析Agent\",\n" +
                 "    \"options\" : {\n" +
@@ -207,21 +170,10 @@ class CopilotControllerTest {
                 "      \"timeout\" : 30000,\n" +
                 "      \"toggleAble\" : true\n" +
                 "    },\n" +
-                "    \"outputKey\" : \"analysis_result\",\n" +
+                "    \"outputKey\" : \"analysis_report\",\n" +
                 "    \"tools\" : [ {\n" +
-                "      \"autoMock\" : false,\n" +
-                "      \"description\" : \"用于处理数据分析问题的工具\",\n" +
-                "      \"name\" : \"data_analysis_tool\",\n" +
-                "      \"parameters\" : {\n" +
-                "        \"type\" : \"object\",\n" +
-                "        \"properties\" : {\n" +
-                "          \"data\" : {\n" +
-                "            \"type\" : \"string\",\n" +
-                "            \"description\" : \"需要分析的数据\"\n" +
-                "          }\n" +
-                "        },\n" +
-                "        \"required\" : [ \"data\" ]\n" +
-                "      }\n" +
+                "      \"autoMock\" : true,\n" +
+                "      \"name\" : \"data_analyzer\"\n" +
                 "    } ],\n" +
                 "    \"type\" : \"react\"\n" +
                 "  }, {\n" +
@@ -230,9 +182,9 @@ class CopilotControllerTest {
                 "      \"maxIterations\" : 1\n" +
                 "    },\n" +
                 "    \"description\" : \"生成最终报告\",\n" +
-                "    \"inputKey\" : \"results\",\n" +
-                "    \"inputKeys\" : [ \"results\", \"math_solution\", \"translation_result\", \"analysis_result\" ],\n" +
-                "    \"instructions\" : \"你是一个报告生成专家。根据从其他Agent获取的结果生成最终报告。提供清晰、有帮助的回复。\",\n" +
+                "    \"inputKey\" : \"math_solution\",\n" +
+                "    \"inputKeys\" : [ \"math_solution\", \"translated_text\", \"analysis_report\" ],\n" +
+                "    \"instructions\" : \"你是一个报告生成专家。根据从其他Agent获取的数据生成最终报告。返回生成的报告。\",\n" +
                 "    \"model\" : \"qwen-turbo\",\n" +
                 "    \"name\" : \"报告生成Agent\",\n" +
                 "    \"options\" : {\n" +
@@ -249,7 +201,7 @@ class CopilotControllerTest {
                 "    \"tools\" : [ ],\n" +
                 "    \"type\" : \"llm\"\n" +
                 "  } ],\n" +
-                "  \"description\" : \"一个包含接待、问题分类、数据处理、翻译、数据分析和报告生成的多代理系统。\",\n" +
+                "  \"description\" : \"一个智能客服系统，包含问题分类、数学处理、翻译、数据分析和生成报告的Agent。\",\n" +
                 "  \"edges\" : [ {\n" +
                 "    \"config\" : { },\n" +
                 "    \"edgeId\" : \"edge1\",\n" +
@@ -334,30 +286,16 @@ class CopilotControllerTest {
                 "  \"metadata\" : {\n" +
                 "    \"author\" : \"AI Assistant\",\n" +
                 "    \"category\" : \"demonstration\",\n" +
-                "    \"createdAt\" : \"2023-10-01T00:00:00Z\",\n" +
+                "    \"createdAt\" : \"2024-01-01T00:00:00Z\",\n" +
                 "    \"customFields\" : {\n" +
                 "      \"estimatedDuration\" : \"10-20 minutes\",\n" +
                 "      \"complexity\" : \"medium\",\n" +
                 "      \"requiredAgents\" : 6,\n" +
                 "      \"agentTypes\" : [ \"llm\", \"react\" ],\n" +
-                "      \"features\" : [ \"Output Constraints\", \"Conditional Routing\", \"Structured Output\", \"Data Analysis\", \"Translation\", \"Math Problem Solving\" ],\n" +
-                "      \"outputConstraints\" : {\n" +
-                "        \"request_classifier\" : \"Exact values: math, translation, data_analysis\",\n" +
-                "        \"report_generator\" : \"JSON format with final report\"\n" +
-                "      },\n" +
-                "      \"conditionalEdges\" : {\n" +
-                "        \"request_classifier\" : \"Routes to specific agents based on classification\"\n" +
-                "      },\n" +
-                "      \"validationRules\" : {\n" +
-                "        \"rule1\" : \"All agents with conditional edges must have output constraints in instructions\",\n" +
-                "        \"rule2\" : \"Output values must exactly match condition values\",\n" +
-                "        \"rule3\" : \"All possible condition values must be listed in agent instructions\",\n" +
-                "        \"rule4\" : \"Structured output must specify exact JSON format\"\n" +
-                "      },\n" +
-                "      \"description\" : \"展示输出约束和条件路由的工作流示例，确保Agent输出格式与条件边匹配。包含多层分类和任务处理。\"\n" +
+                "      \"features\" : [ \"Output Constraints\", \"Conditional Routing\", \"Structured Output\" ]\n" +
                 "    },\n" +
-                "    \"lastUpdatedAt\" : \"2023-10-01T00:00:00Z\",\n" +
-                "    \"tags\" : [ \"demo\", \"customer-service\", \"multi-agent-system\" ]\n" +
+                "    \"lastUpdatedAt\" : \"2024-01-01T00:00:00Z\",\n" +
+                "    \"tags\" : [ \"customer-service\", \"multi-agent-system\", \"workflow\" ]\n" +
                 "  },\n" +
                 "  \"name\" : \"智能客服系统\",\n" +
                 "  \"version\" : \"1.0.0\",\n" +
