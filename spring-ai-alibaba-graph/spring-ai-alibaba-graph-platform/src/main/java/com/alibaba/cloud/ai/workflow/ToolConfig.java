@@ -1,7 +1,6 @@
 package com.alibaba.cloud.ai.workflow;
 
 import lombok.Data;
-import org.springframework.ai.tool.definition.ToolDefinition;
 
 import java.util.Map;
 

@@ -4,7 +4,6 @@ import com.alibaba.cloud.ai.TestApplication;
 import com.alibaba.cloud.ai.service.WorkflowService;
 import com.alibaba.cloud.ai.workflow.WorkflowSchema;
 import com.alibaba.fastjson.JSON;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

@@ -3,12 +3,7 @@ package com.alibaba.cloud.ai.service;
 import com.alibaba.cloud.ai.workflow.ToolConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.util.StringUtils;
 
-import java.util.Map;
 
 /**
  * MockTool - 模拟工具实现
