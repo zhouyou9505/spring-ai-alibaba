@@ -33,8 +33,8 @@
           },
           "type": {
             "type": "string",
-            "enum": ["llm", "react", "react_with_human", "reflect"],
-            "description": "Agent类型：llm（简单LLM对话）、react（ReAct模式，支持工具调用）、react_with_human（支持人工干预）、reflect（具备反思优化能力）"
+            "enum": ["llm", "react", "react_with_human"],
+            "description": "Agent类型：llm（简单LLM对话）、react（ReAct模式，支持工具调用）、react_with_human（支持人工干预）"
           },
           "description": {
             "type": "string",
@@ -143,27 +143,27 @@
           },
           "tools": {
             "type": "array",
-            "description": "Agent可用的工具列表。如果为空且Agent类型为react、react_with_human、reflect，将自动添加mock_tool",
+            "description": "Agent可用的工具列表。如果为空且Agent类型为react、react_with_human，将自动添加mock_tool",
             "items": {
               "type": "object",
               "properties": {
                 "name": {
                   "type": "string",
-                  "description": "工具名称。如果为mock_tool，将自动生成模拟参数和描述"
+                  "description": "工具名称。如果autoMock=true，将自动生成模拟参数和描述"
                 },
                 "description": {
                   "type": "string",
-                  "description": "工具描述（可选，mock_tool会自动生成）"
+                  "description": "工具描述（可选，如果autoMock=true会自动生成工具描述）"
                 },
                 "parameters": {
                   "type": "object",
-                  "description": "工具参数定义（可选，mock_tool会自动生成）",
+                  "description": "工具参数定义（可选，如果autoMock=true自动生成参数定义）",
                   "additionalProperties": true
                 },
                 "autoMock": {
                   "type": "boolean",
                   "default": false,
-                  "description": "是否自动生成mock工具（当工具不存在时）"
+                  "description": "如果用户的要求工具不在预置的工具列表里，autoMock设置为true，autoMock=true，否则为false"
                 }
               },
               "required": ["name"],
@@ -471,7 +471,7 @@
       "llm": {
         "description": "简单LLM对话Agent",
         "特点": ["直接与LLM对话", "无工具调用", "适合简单问答"],
-        "适用场景": ["客服对话", "内容生成", "简单咨询", "分类决策"],
+        "适用场景": ["客服对话", "内容生成", "简单咨询", "分类决策", "内容总结"],
         "配置建议": {
           "tools": "通常为空或简单工具",
           "maxIterations": "1",
@@ -490,22 +490,22 @@
       },
       "react_with_human": {
         "description": "支持人工干预的ReAct Agent",
-        "特点": ["ReAct基础上增加人工节点", "支持中断和恢复", "审批机制"],
-        "适用场景": ["医疗诊断建议", "金融审批", "法律文档生成", "合规审核", "复杂决策"],
+        "特点": [
+          "ReAct基础上增加人工节点",
+          "支持中断和恢复",
+          "审批机制"
+        ],
+        "适用场景": [
+          "医疗诊断建议",
+          "金融审批",
+          "法律文档生成",
+          "合规审核",
+          "复杂决策"
+        ],
         "配置建议": {
           "tools": "配置相关工具",
           "maxIterations": "8-15",
           "instructions": "包含人工确认点的指令，对于决策Agent必须指定输出约束"
-        }
-      },
-      "reflect": {
-        "description": "具备反思优化能力的Agent",
-        "特点": ["生成→评估→改进闭环", "双节点设计", "多轮迭代", "自动记录反思"],
-        "适用场景": ["高质量内容生成", "代码生成", "错误修正", "知识问答优化"],
-        "配置建议": {
-          "tools": "配置生成和评估工具",
-          "maxIterations": "3-5",
-          "instructions": "包含反思和改进步骤的指令，对于最终输出必须指定格式"
         }
       }
     },

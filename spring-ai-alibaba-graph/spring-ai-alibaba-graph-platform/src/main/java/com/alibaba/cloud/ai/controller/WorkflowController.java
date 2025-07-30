@@ -77,11 +77,10 @@ public class WorkflowController {
         Map<String, Object> response = new HashMap<>();
 
         if (workflowId == null){
-            flowRunner.runWorkflow(workflowSchema,input);
+            return flowRunner.runWorkflow(workflowSchema,input);
         }else {
-            flowRunner.runWorkflow(workflowId, input);
+            return flowRunner.runWorkflow(workflowId, input);
         }
-        return response;
     }
 
     /**

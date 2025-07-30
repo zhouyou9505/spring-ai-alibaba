@@ -72,7 +72,7 @@
       "name": "技术支持Agent",
       "type": "react",
       "description": "处理技术问题",
-      "instructions": "你是一个技术支持专家。处理技术问题并提供解决方案。返回分析结果，格式如下：{\"problem_type\": \"technical_issue\", \"solution\": \"detailed_solution\", \"priority\": \"high/medium/low\"}。始终使用此确切的JSON结构。",
+      "instructions": "你是一个技术支持专家。处理技术问题并提供解决方案。返回分析结果",
       "model": "qwen-turbo",
       "config": {
         "maxIterations": 5
@@ -102,7 +102,7 @@
       "name": "账单支持Agent",
       "type": "react",
       "description": "处理账单相关问题",
-      "instructions": "你是一个账单支持专家。处理账单和支付相关问题。返回处理结果，格式如下：{\"billing_issue\": \"issue_description\", \"resolution\": \"resolution_details\", \"amount\": \"amount_if_applicable\"}。始终使用此确切的JSON结构。",
+      "instructions": "你是一个账单支持专家。处理账单和支付相关问题。",
       "model": "qwen-turbo",
       "config": {
         "maxIterations": 5
@@ -153,7 +153,7 @@
       "name": "投诉处理Agent",
       "type": "react_with_human",
       "description": "处理投诉，需要人工干预",
-      "instructions": "你是一个投诉处理专家。处理用户投诉并在需要时暂停等待人工确认。对于最终决定，回复确切为 'escalated' 或 'resolved'。不要提供解释，只回复决定。有效回复：'escalated'、'resolved'。",
+      "instructions": "你是一个投诉处理专家。处理用户投诉并在需要时暂停等待人工确认。",
       "model": "qwen-turbo",
       "config": {
         "maxIterations": 8
@@ -183,7 +183,7 @@
       "name": "紧急处理Agent",
       "type": "react_with_human",
       "description": "处理紧急问题，需要立即人工干预",
-      "instructions": "你是一个紧急问题处理专家。处理紧急问题并立即暂停等待人工确认。对于最终决定，回复确切为 'immediate_action' 或 'escalated_to_manager'。不要提供解释，只回复决定。有效回复：'immediate_action'、'escalated_to_manager'。",
+      "instructions": "你是一个紧急问题处理专家。处理紧急问题并立即暂停等待人工确认。",
       "model": "qwen-turbo",
       "config": {
         "maxIterations": 3
@@ -213,7 +213,7 @@
       "name": "满意度调查Agent",
       "type": "llm",
       "description": "收集用户满意度反馈",
-      "instructions": "你是一个满意度调查专家。收集用户对服务的满意度反馈。回复满意度评分，格式如下：{\"satisfaction_score\": number 1-10, \"feedback\": \"user_feedback\", \"recommendations\": [\"rec1\", \"rec2\"]}。始终使用此确切的JSON结构。",
+      "instructions": "你是一个满意度调查专家。收集用户对服务的满意度反馈。回复满意度评分",
       "model": "qwen-turbo",
       "config": {
         "maxIterations": 1

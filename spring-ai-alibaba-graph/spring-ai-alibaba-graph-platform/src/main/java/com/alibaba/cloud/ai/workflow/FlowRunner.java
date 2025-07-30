@@ -56,7 +56,6 @@ public class FlowRunner {
         CompiledGraph compiledGraph = buildGraph(schema,chatModel);
         compiledGraphs.put(schema.getWorkflowId(), compiledGraph);
 
-        runWorkflow(schema.getWorkflowId(), Map.of("user_message","帮我翻译:你吃饭了吗"));
     }
 
     /**
