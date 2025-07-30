@@ -14,7 +14,7 @@
       "config": {
         "maxIterations": 1
       },
-      "inputKey": "user_message",
+      "inputKeys": ["user_message"],
       "outputKey": "reception_output",
       "options": {
         "toggleAble": true,
@@ -35,7 +35,7 @@
       "config": {
         "maxIterations": 1
       },
-      "inputKey": "reception_output",
+      "inputKeys": ["reception_output"],
       "outputKey": "request_category",
       "options": {
         "toggleAble": true,
@@ -56,7 +56,7 @@
       "config": {
         "maxIterations": 1
       },
-      "inputKey": "user_request",
+      "inputKeys": ["user_request"],
       "outputKey": "priority_level",
       "options": {
         "toggleAble": true,
@@ -77,7 +77,7 @@
       "config": {
         "maxIterations": 5
       },
-      "inputKey": "user_request",
+      "inputKeys": ["user_request"],
       "outputKey": "technical_solution",
       "options": {
         "toggleAble": true,
@@ -107,7 +107,7 @@
       "config": {
         "maxIterations": 5
       },
-      "inputKey": "user_request",
+      "inputKeys": ["user_request"],
       "outputKey": "billing_solution",
       "options": {
         "toggleAble": true,
@@ -137,7 +137,7 @@
       "config": {
         "maxIterations": 1
       },
-      "inputKey": "user_request",
+      "inputKeys": ["user_request"],
       "outputKey": "general_response",
       "options": {
         "toggleAble": true,
@@ -158,7 +158,7 @@
       "config": {
         "maxIterations": 8
       },
-      "inputKey": "user_request",
+      "inputKeys": ["user_request"],
       "outputKey": "complaint_resolution",
       "options": {
         "toggleAble": true,
@@ -188,7 +188,7 @@
       "config": {
         "maxIterations": 3
       },
-      "inputKey": "user_request",
+      "inputKeys": ["user_request"],
       "outputKey": "urgent_action",
       "options": {
         "toggleAble": true,
@@ -218,7 +218,7 @@
       "config": {
         "maxIterations": 1
       },
-      "inputKey": "service_result",
+      "inputKeys": ["service_result"],
       "outputKey": "satisfaction_result",
       "options": {
         "toggleAble": true,

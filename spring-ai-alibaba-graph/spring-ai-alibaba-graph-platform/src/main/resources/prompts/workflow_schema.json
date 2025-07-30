@@ -53,9 +53,9 @@
             "description": "Agent的具体配置",
             "additionalProperties": true
           },
-          "inputKey": {
-            "type": "string",
-            "description": "输入键名"
+          "inputKeys": {
+            "type": "array",
+            "description": "输入键名，字符串数组形式"
           },
           "outputKey": {
             "type": "string",
