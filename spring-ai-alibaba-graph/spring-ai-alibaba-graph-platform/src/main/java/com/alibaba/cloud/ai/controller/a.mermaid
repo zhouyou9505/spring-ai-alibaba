@@ -6,25 +6,25 @@ flowchart TD
     __END__((stop))
     reception_agent("reception_agent")
     request_classifier("request_classifier")
-    data_agent("data_agent")
+    math_agent("math_agent")
     translation_agent("translation_agent")
-    analysis_agent("analysis_agent")
+    data_analysis_agent("data_analysis_agent")
     report_generator("report_generator")
     condition1{"check state"}
     __START__:::__START__ --> reception_agent:::reception_agent
-    analysis_agent:::analysis_agent --> report_generator:::report_generator
-    data_agent:::data_agent --> report_generator:::report_generator
+    data_analysis_agent:::data_analysis_agent --> report_generator:::report_generator
     reception_agent:::reception_agent --> request_classifier:::request_classifier
     translation_agent:::translation_agent --> report_generator:::report_generator
+    math_agent:::math_agent --> report_generator:::report_generator
     request_classifier:::request_classifier -.-> condition1:::condition1
-    condition1:::condition1 -.->|default| data_agent:::data_agent
-%%	request_classifier:::request_classifier -.->|default| data_agent:::data_agent
-    condition1:::condition1 -.->|data| data_agent:::data_agent
-%%	request_classifier:::request_classifier -.->|data| data_agent:::data_agent
+    condition1:::condition1 -.->|default| math_agent:::math_agent
+%%	request_classifier:::request_classifier -.->|default| math_agent:::math_agent
     condition1:::condition1 -.->|translation| translation_agent:::translation_agent
 %%	request_classifier:::request_classifier -.->|translation| translation_agent:::translation_agent
-    condition1:::condition1 -.->|analysis| analysis_agent:::analysis_agent
-%%	request_classifier:::request_classifier -.->|analysis| analysis_agent:::analysis_agent
+    condition1:::condition1 -.->|data_analysis| data_analysis_agent:::data_analysis_agent
+%%	request_classifier:::request_classifier -.->|data_analysis| data_analysis_agent:::data_analysis_agent
+    condition1:::condition1 -.->|math| math_agent:::math_agent
+%%	request_classifier:::request_classifier -.->|math| math_agent:::math_agent
     report_generator:::report_generator --> __END__:::__END__
 
     classDef ___START__ fill:black,stroke-width:1px,font-size:xx-small;

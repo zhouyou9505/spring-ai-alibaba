@@ -95,6 +95,7 @@ public class NodeActionFactory {
             // 创建 LlmNode
             LlmNode llmNode = LlmNode.builder()
                     .chatClient(chatClient)
+                    .userPromptTemplate(inputKey)
                     .systemPromptTemplate(prompt)
                     .messagesKey("messages")
                     .outputKey(outputKey)

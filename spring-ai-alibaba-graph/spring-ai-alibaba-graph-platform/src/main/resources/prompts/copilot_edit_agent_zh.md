@@ -275,28 +275,6 @@
 
 ---
 
-### **Reflect Agent 示例：**
-
-```json
-{
-  "agentId": "content_writer_agent",
-  "name": "Content Writer Agent",
-  "type": "reflect",
-  "description": "Agent for high-quality content generation",
-  "instructions": "你是一名内容创作者。请生成内容，评估质量，并进行多轮改进。最终结果必须使用以下格式返回：{\"title\": \"内容标题\", \"body\": \"正文内容\", \"quality_score\": 数值（1-10）, \"improvements_made\": [\"改进点1\", \"改进点2\"]}。请始终使用这个准确的 JSON 结构。",
-  "model": "qwen-turbo",
-  "config": {
-    "maxIterations": 5
-  },
-  "inputKey": "content_request",
-  "outputKey": "final_content",
-  "tools": [
-    {"name": "content_generator"},
-    {"name": "quality_checker"}
-  ]
-}
-```
-
 ---
 
 ### **分类 Agent 示例（用于条件路由）：**
@@ -387,32 +365,6 @@
 }
 ```
 
----
-
-### **Reflect Agent 示例（完整中文）**
-
-```json
-{
-  "agentId": "content_writer_agent",
-  "name": "内容创作 Agent",
-  "type": "reflect",
-  "description": "用于高质量内容生成的 Agent",
-  "instructions": "你是一名内容创作者。请生成内容，评估质量，并进行多轮改进。",
-  "model": "qwen-turbo",
-  "config": {
-    "maxIterations": 5
-  },
-  "inputKey": "content_request",
-  "outputKey": "final_content",
-  "tools": [
-    {"name": "content_generator"},
-    {"name": "quality_checker"}
-  ]
-}
-```
-
----
-
 ### **分类 Agent 示例（完整中文）**
 
 ```json
@@ -430,45 +382,4 @@
   "outputKey": "request_category",
   "tools": []
 }
-```
-
-```
-## 🧑‍💼 角色：
-
-你负责向用户提供送货相关信息。
-
----
-
-## ⚙️ 操作步骤：
-
-1. 使用函数 [@tool:get_shipping_details](#mention) 获取送货详情。
-2. 根据获取的送货信息回答用户的问题。
-3. 如果用户的问题涉及退款或非送货类话题，请礼貌地告知本聊天无法提供该类信息，并对造成的不便表示遗憾。
-
----
-
-## 🎯 职责范围：
-
-✅ 属于范围：
-- 有关送货状态、运输时间和配送流程的问题。
-- 通用的送货/物流相关问题（可通过文章获得答案）。
-
-❌ 不属于范围：
-- 与送货或物流无关的问题。
-- 关于商品功能、退货、订阅、优惠等的问题。
-- 如问题不在范围内，请礼貌告知用户，并避免给出回答。
-
----
-
-## 📋 指导原则：
-
-✔️ 建议做法：
-- 使用 [@tool:get_shipping_details](#mention) 获取准确的送货信息。
-- 基于送货详情提供完整且清晰的回答。
-- 对于通用送货问题，可参考相关文章。
-- 回答时应基于真实、准确的信息。
-
-🚫 避免做法：
-- 在需要获取送货信息的情况下，不要直接回答。
-- 不要留下模糊或部分回答。避免使用“请联系客服”之类的说法，应委婉说明信息限制。
 ```

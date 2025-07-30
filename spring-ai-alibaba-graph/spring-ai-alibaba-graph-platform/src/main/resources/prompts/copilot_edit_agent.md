@@ -304,26 +304,6 @@ When creating a new agent, strictly follow the format of this example agent. The
 }
 ```
 
-**Reflect Agent Example:**
-```json
-{
-  "agentId": "content_writer_agent",
-  "name": "Content Writer Agent",
-  "type": "reflect",
-  "description": "Agent for high-quality content generation",
-  "instructions": "You are a content writer. Generate content, evaluate quality, and improve iteratively. ",
-  "model": "qwen-turbo",
-  "config": {
-    "maxIterations": 5
-  },
-  "inputKey": "content_request",
-  "outputKey": "final_content",
-  "tools": [
-    {"name": "content_generator"},
-    {"name": "quality_checker"}
-  ]
-}
-```
 
 **Classification Agent Example (for conditional routing):**
 ```json
@@ -340,52 +320,5 @@ When creating a new agent, strictly follow the format of this example agent. The
   "inputKey": "user_request",
   "outputKey": "request_category",
   "tools": []
-}
-```
-
-example instructions:
-```
-## 🧑‍💼 Role:
-
-You are responsible for providing delivery information to the user.
-
----
-
-## ⚙️ Steps to Follow:
-
-1. Fetch the delivery details using the function: [@tool:get_shipping_details](#mention).
-2. Answer the user's question based on the fetched delivery details.
-3. If the user's issue concerns refunds or other topics beyond delivery, politely inform them that the information is not available within this chat and express regret for the inconvenience.
-
----
-## 🎯 Scope:
-
-✅ In Scope:
-- Questions about delivery status, shipping timelines, and delivery processes.
-- Generic delivery/shipping-related questions where answers can be sourced from articles.
-
-❌ Out of Scope:
-- Questions unrelated to delivery or shipping.
-- Questions about products features, returns, subscriptions, or promotions.
-- If a question is out of scope, politely inform the user and avoid providing an answer.
-
----
-## 📋 Guidelines:
-
-✔️ Dos:
-- Use [@tool:get_shipping_details](#mention) to fetch accurate delivery information.
-- Provide complete and clear answers based on the delivery details.
-- For generic delivery questions, refer to relevant articles if necessary.
-- Stick to factual information when answering.
-
-🚫 Don'ts:
-- Do not provide answers without fetching delivery details when required.
-- Do not leave the user with partial information. Refrain from phrases like 'please contact support'; instead, relay information limitations gracefully.
-```
-
-output format:
-```json
-{
-  "agent_instructions": "<new agent instructions with relevant changes>"
 }
 ```

@@ -31,7 +31,7 @@ class CopilotControllerTest {
     @Test
     void testAdjustWorkflow_CreateNewSystem_Success() throws Exception {
         Map<String, Object> request = new HashMap<>();
-        request.put("userRequest", "创建一个智能客服系统，包含接待Agent、问题分类Agent(问题分类包含分类tool)、数学的交给数据Agent，翻译的交给翻译Agent，数据分析的交给数据分析Agent，最后生成报告的Agent。");
+        request.put("userRequest", "创建一个智能客服系统，包含接待Agent、问题分类Agent(问题分类包含分类tool)、数学的交给数据Agent，翻译的交给翻译Agent，数据分析的交给数据分析Agent，最后生成报告的Agent(llm类型)。");
 
         // 执行
         Map<String, Object> result = copilotController.adjustWorkflow(request);
@@ -45,16 +45,16 @@ class CopilotControllerTest {
     @Test
     void testAdjustWorkflow_UpdateExisting_Success() throws Exception {
         String schema = "{\n" +
-                "  \"workflowId\": \"intelligent_customer_service_system\",\n" +
+                "  \"workflowId\": \"smart_customer_service_system\",\n" +
                 "  \"name\": \"智能客服系统\",\n" +
-                "  \"description\": \"一个包含接待、问题分类、数据处理、翻译、数据分析和报告生成的多代理系统\",\n" +
+                "  \"description\": \"一个包含接待、问题分类、数据处理、翻译、数据分析和报告生成的多代理智能客服系统。\",\n" +
                 "  \"version\": \"1.0.0\",\n" +
                 "  \"agents\": [\n" +
                 "    {\n" +
                 "      \"agentId\": \"reception_agent\",\n" +
                 "      \"name\": \"接待Agent\",\n" +
                 "      \"type\": \"llm\",\n" +
-                "      \"description\": \"负责与用户进行初步交流，收集基本信息\",\n" +
+                "      \"description\": \"负责接待用户，收集基本信息并传递给问题分类Agent。\",\n" +
                 "      \"instructions\": \"你是一个友好的接待员，请了解用户的需求并收集基本信息。提供清晰、简洁的回复。\",\n" +
                 "      \"model\": \"qwen-turbo\",\n" +
                 "      \"config\": {\n" +
@@ -74,12 +74,12 @@ class CopilotControllerTest {
                 "    {\n" +
                 "      \"agentId\": \"request_classifier\",\n" +
                 "      \"name\": \"问题分类Agent\",\n" +
-                "      \"type\": \"llm\",\n" +
-                "      \"description\": \"将用户请求分类到特定类别\",\n" +
-                "      \"instructions\": \"你是一个请求分类器。分析用户请求并将其分类为以下类别之一：'math', 'translation', 'data_analysis'。你必须只回复类别名称，不要其他内容。有效回复：'math', 'translation', 'data_analysis'。\",\n" +
+                "      \"type\": \"react\",\n" +
+                "      \"description\": \"将用户请求分类到特定类别，并调用相应的工具。\",\n" +
+                "      \"instructions\": \"你是一个问题分类器。分析用户请求并将其分类为以下类别之一：'math', 'translation', 'data_analysis'。你必须只回复类别名称，不要其他内容。有效回复：'math', 'translation', 'data_analysis'。\",\n" +
                 "      \"model\": \"qwen-turbo\",\n" +
                 "      \"config\": {\n" +
-                "        \"maxIterations\": 1\n" +
+                "        \"maxIterations\": 5\n" +
                 "      },\n" +
                 "      \"inputKey\": \"reception_output\",\n" +
                 "      \"outputKey\": \"request_category\",\n" +
@@ -93,16 +93,17 @@ class CopilotControllerTest {
                 "      \"tools\": [\n" +
                 "        {\n" +
                 "          \"name\": \"classification_tool\",\n" +
-                "          \"autoMock\": false\n" +
+                "          \"autoMock\": false,\n" +
+                "          \"description\": \"用于分类问题的工具\"\n" +
                 "        }\n" +
                 "      ]\n" +
                 "    },\n" +
                 "    {\n" +
                 "      \"agentId\": \"math_agent\",\n" +
-                "      \"name\": \"数学处理Agent\",\n" +
+                "      \"name\": \"数学Agent\",\n" +
                 "      \"type\": \"react\",\n" +
-                "      \"description\": \"处理数学相关问题\",\n" +
-                "      \"instructions\": \"你是一个数学专家。处理数学问题并提供解决方案。返回分析结果。\",\n" +
+                "      \"description\": \"处理数学相关的问题。\",\n" +
+                "      \"instructions\": \"你是一个数学专家。处理数学问题并提供解决方案。\",\n" +
                 "      \"model\": \"qwen-turbo\",\n" +
                 "      \"config\": {\n" +
                 "        \"maxIterations\": 5\n" +
@@ -127,8 +128,8 @@ class CopilotControllerTest {
                 "      \"agentId\": \"translation_agent\",\n" +
                 "      \"name\": \"翻译Agent\",\n" +
                 "      \"type\": \"react\",\n" +
-                "      \"description\": \"处理翻译相关问题\",\n" +
-                "      \"instructions\": \"你是一个翻译专家。处理翻译请求并提供翻译结果。\",\n" +
+                "      \"description\": \"处理翻译相关的问题。\",\n" +
+                "      \"instructions\": \"你是一个翻译专家。处理翻译问题并提供翻译结果。\",\n" +
                 "      \"model\": \"qwen-turbo\",\n" +
                 "      \"config\": {\n" +
                 "        \"maxIterations\": 5\n" +
@@ -153,8 +154,8 @@ class CopilotControllerTest {
                 "      \"agentId\": \"data_analysis_agent\",\n" +
                 "      \"name\": \"数据分析Agent\",\n" +
                 "      \"type\": \"react\",\n" +
-                "      \"description\": \"处理数据分析相关问题\",\n" +
-                "      \"instructions\": \"你是一个数据分析专家。处理数据分析请求并提供分析结果。\",\n" +
+                "      \"description\": \"处理数据分析相关的问题。\",\n" +
+                "      \"instructions\": \"你是一个数据分析专家。处理数据分析问题并提供分析结果。\",\n" +
                 "      \"model\": \"qwen-turbo\",\n" +
                 "      \"config\": {\n" +
                 "        \"maxIterations\": 5\n" +
@@ -178,15 +179,15 @@ class CopilotControllerTest {
                 "    {\n" +
                 "      \"agentId\": \"report_generator\",\n" +
                 "      \"name\": \"报告生成Agent\",\n" +
-                "      \"type\": \"reflect\",\n" +
-                "      \"description\": \"生成最终报告\",\n" +
-                "      \"instructions\": \"你是一个报告生成专家。根据前序Agent提供的信息生成最终报告。\",\n" +
+                "      \"type\": \"llm\",\n" +
+                "      \"description\": \"生成最终报告。\",\n" +
+                "      \"instructions\": \"你是一个报告生成专家。根据接收到的结果生成最终报告。\",\n" +
                 "      \"model\": \"qwen-turbo\",\n" +
                 "      \"config\": {\n" +
-                "        \"maxIterations\": 5\n" +
+                "        \"maxIterations\": 1\n" +
                 "      },\n" +
-                "      \"inputKey\": \"combined_results\",\n" +
-                "      \"outputKey\": \"final_report\",\n" +
+                "      \"inputKey\": \"final_result\",\n" +
+                "      \"outputKey\": \"report\",\n" +
                 "      \"options\": {\n" +
                 "        \"toggleAble\": true,\n" +
                 "        \"controlType\": \"auto\",\n" +
@@ -194,12 +195,7 @@ class CopilotControllerTest {
                 "        \"maxRetries\": 3,\n" +
                 "        \"timeout\": 30000\n" +
                 "      },\n" +
-                "      \"tools\": [\n" +
-                "        {\n" +
-                "          \"name\": \"report_generator_tool\",\n" +
-                "          \"autoMock\": true\n" +
-                "        }\n" +
-                "      ]\n" +
+                "      \"tools\": []\n" +
                 "    }\n" +
                 "  ],\n" +
                 "  \"edges\": [\n" +
@@ -297,32 +293,14 @@ class CopilotControllerTest {
                 "    \"createdAt\": \"2024-01-01T00:00:00Z\",\n" +
                 "    \"lastUpdatedAt\": \"2024-01-01T00:00:00Z\",\n" +
                 "    \"author\": \"AI Assistant\",\n" +
-                "    \"tags\": [\"demo\", \"customer-service\", \"multi-agent\"],\n" +
-                "    \"category\": \"demonstration\",\n" +
+                "    \"tags\": [\"customer-service\", \"multi-agent-system\", \"workflow\"],\n" +
+                "    \"category\": \"customer-support\",\n" +
                 "    \"customFields\": {\n" +
                 "      \"estimatedDuration\": \"10-20 minutes\",\n" +
                 "      \"complexity\": \"medium\",\n" +
                 "      \"requiredAgents\": 6,\n" +
-                "      \"agentTypes\": [\"llm\", \"react\", \"reflect\"],\n" +
-                "      \"features\": [\"Output Constraints\", \"Conditional Routing\", \"Human Intervention\", \"Structured Output\", \"Priority Classification\"],\n" +
-                "      \"outputConstraints\": {\n" +
-                "        \"request_classifier\": \"Exact values: math, translation, data_analysis\",\n" +
-                "        \"math_agent\": \"JSON format with problem_type, solution, priority\",\n" +
-                "        \"translation_agent\": \"Translation result in JSON format\",\n" +
-                "        \"data_analysis_agent\": \"JSON format with analysis results\",\n" +
-                "        \"report_generator\": \"JSON format with final report\"\n" +
-                "      },\n" +
-                "      \"conditionalEdges\": {\n" +
-                "        \"request_classifier\": \"Routes to specific support agents based on classification\",\n" +
-                "        \"report_generator\": \"Generates final report based on the combined results from previous agents\"\n" +
-                "      },\n" +
-                "      \"validationRules\": {\n" +
-                "        \"rule1\": \"All agents with conditional edges must have output constraints in instructions\",\n" +
-                "        \"rule2\": \"Output values must exactly match condition values\",\n" +
-                "        \"rule3\": \"All possible condition values must be listed in agent instructions\",\n" +
-                "        \"rule4\": \"Structured output must specify exact JSON format\"\n" +
-                "      },\n" +
-                "      \"description\": \"展示输出约束和条件路由的工作流示例，确保Agent输出格式与条件边匹配。包含多层分类和优先级处理。\"\n" +
+                "      \"agentTypes\": [\"llm\", \"react\"],\n" +
+                "      \"features\": [\"Output Constraints\", \"Conditional Routing\", \"Structured Output\"]\n" +
                 "    }\n" +
                 "  }\n" +
                 "}";
