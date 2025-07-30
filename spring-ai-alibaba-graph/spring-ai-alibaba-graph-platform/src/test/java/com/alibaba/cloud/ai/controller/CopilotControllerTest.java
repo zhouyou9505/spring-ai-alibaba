@@ -44,16 +44,16 @@ class CopilotControllerTest {
     @Test
     void testAdjustWorkflow_UpdateExisting_Success() throws Exception {
         String schema = "{\n" +
-                "  \"workflowId\": \"smart_customer_service_system\",\n" +
+                "  \"workflowId\": \"intelligent_customer_service_system\",\n" +
                 "  \"name\": \"智能客服系统\",\n" +
-                "  \"description\": \"一个包含接待、问题分类、数据处理、翻译、数据分析和报告生成的多代理智能客服系统。\",\n" +
+                "  \"description\": \"一个包含接待、问题分类、数据处理、翻译、数据分析和报告生成的多代理系统。\",\n" +
                 "  \"version\": \"1.0.0\",\n" +
                 "  \"agents\": [\n" +
                 "    {\n" +
                 "      \"agentId\": \"reception_agent\",\n" +
                 "      \"name\": \"接待Agent\",\n" +
                 "      \"type\": \"llm\",\n" +
-                "      \"description\": \"负责接待用户，收集基本信息并传递给问题分类Agent。\",\n" +
+                "      \"description\": \"负责接待用户，收集基本信息并引导用户。\",\n" +
                 "      \"instructions\": \"你是一个友好的接待员，请了解用户的需求并收集基本信息。提供清晰、简洁的回复。\",\n" +
                 "      \"model\": \"qwen-turbo\",\n" +
                 "      \"config\": {\n" +
@@ -63,8 +63,15 @@ class CopilotControllerTest {
                 "      \"outputKey\": \"reception_output\",\n" +
                 "      \"options\": {\n" +
                 "        \"toggleAble\": true,\n" +
+                "        \"ragReturnType\": null,\n" +
+                "        \"ragK\": 5,\n" +
                 "        \"controlType\": \"auto\",\n" +
                 "        \"outputVisibility\": \"public\",\n" +
+                "        \"examples\": null,\n" +
+                "        \"order\": null,\n" +
+                "        \"disabled\": false,\n" +
+                "        \"locked\": false,\n" +
+                "        \"maxCallsPerParentAgent\": null,\n" +
                 "        \"maxRetries\": 3,\n" +
                 "        \"timeout\": 30000\n" +
                 "      },\n" +
@@ -74,8 +81,8 @@ class CopilotControllerTest {
                 "      \"agentId\": \"request_classifier\",\n" +
                 "      \"name\": \"问题分类Agent\",\n" +
                 "      \"type\": \"react\",\n" +
-                "      \"description\": \"将用户请求分类到特定类别，并调用相应的工具。\",\n" +
-                "      \"instructions\": \"你是一个问题分类器。分析用户请求并将其分类为以下类别之一：'math', 'translation', 'data_analysis'。你必须只回复类别名称，不要其他内容。有效回复：'math', 'translation', 'data_analysis'。\",\n" +
+                "      \"description\": \"将用户请求分类到特定类别，并调用相应工具。\",\n" +
+                "      \"instructions\": \"你是一个请求分类器。分析用户请求并将其分类为以下类别之一：'math', 'translation', 'data_analysis'。返回分类结果。You MUST respond with ONLY: 'math', 'translation', 'data_analysis'.\",\n" +
                 "      \"model\": \"qwen-turbo\",\n" +
                 "      \"config\": {\n" +
                 "        \"maxIterations\": 5\n" +
@@ -84,41 +91,58 @@ class CopilotControllerTest {
                 "      \"outputKey\": \"request_category\",\n" +
                 "      \"options\": {\n" +
                 "        \"toggleAble\": true,\n" +
+                "        \"ragReturnType\": null,\n" +
+                "        \"ragK\": 5,\n" +
                 "        \"controlType\": \"auto\",\n" +
                 "        \"outputVisibility\": \"public\",\n" +
+                "        \"examples\": null,\n" +
+                "        \"order\": null,\n" +
+                "        \"disabled\": false,\n" +
+                "        \"locked\": false,\n" +
+                "        \"maxCallsPerParentAgent\": null,\n" +
                 "        \"maxRetries\": 3,\n" +
                 "        \"timeout\": 30000\n" +
                 "      },\n" +
                 "      \"tools\": [\n" +
                 "        {\n" +
                 "          \"name\": \"classification_tool\",\n" +
-                "          \"autoMock\": false,\n" +
-                "          \"description\": \"用于分类问题的工具\"\n" +
+                "          \"description\": null,\n" +
+                "          \"parameters\": null,\n" +
+                "          \"autoMock\": true\n" +
                 "        }\n" +
                 "      ]\n" +
                 "    },\n" +
                 "    {\n" +
-                "      \"agentId\": \"math_agent\",\n" +
-                "      \"name\": \"数学Agent\",\n" +
+                "      \"agentId\": \"data_agent\",\n" +
+                "      \"name\": \"数据Agent\",\n" +
                 "      \"type\": \"react\",\n" +
                 "      \"description\": \"处理数学相关的问题。\",\n" +
-                "      \"instructions\": \"你是一个数学专家。处理数学问题并提供解决方案。\",\n" +
+                "      \"instructions\": \"你是一个数学专家。处理数学问题并提供解决方案。返回分析结果。Return results in this exact format: {'solution': 'string', 'details': 'string'}.\",\n" +
                 "      \"model\": \"qwen-turbo\",\n" +
                 "      \"config\": {\n" +
                 "        \"maxIterations\": 5\n" +
                 "      },\n" +
-                "      \"inputKey\": \"user_request\",\n" +
+                "      \"inputKey\": \"reception_output\",\n" +
                 "      \"outputKey\": \"math_solution\",\n" +
                 "      \"options\": {\n" +
                 "        \"toggleAble\": true,\n" +
+                "        \"ragReturnType\": null,\n" +
+                "        \"ragK\": 5,\n" +
                 "        \"controlType\": \"auto\",\n" +
                 "        \"outputVisibility\": \"public\",\n" +
+                "        \"examples\": null,\n" +
+                "        \"order\": null,\n" +
+                "        \"disabled\": false,\n" +
+                "        \"locked\": false,\n" +
+                "        \"maxCallsPerParentAgent\": null,\n" +
                 "        \"maxRetries\": 3,\n" +
                 "        \"timeout\": 30000\n" +
                 "      },\n" +
                 "      \"tools\": [\n" +
                 "        {\n" +
                 "          \"name\": \"math_solver\",\n" +
+                "          \"description\": null,\n" +
+                "          \"parameters\": null,\n" +
                 "          \"autoMock\": true\n" +
                 "        }\n" +
                 "      ]\n" +
@@ -128,23 +152,32 @@ class CopilotControllerTest {
                 "      \"name\": \"翻译Agent\",\n" +
                 "      \"type\": \"react\",\n" +
                 "      \"description\": \"处理翻译相关的问题。\",\n" +
-                "      \"instructions\": \"你是一个翻译专家。处理翻译问题并提供翻译结果。\",\n" +
+                "      \"instructions\": \"你是一个翻译专家。处理翻译请求并将结果返回。Return results in this exact format: {'translated_text': 'string', 'source_language': 'string', 'target_language': 'string'}.\",\n" +
                 "      \"model\": \"qwen-turbo\",\n" +
                 "      \"config\": {\n" +
                 "        \"maxIterations\": 5\n" +
                 "      },\n" +
-                "      \"inputKey\": \"user_request\",\n" +
+                "      \"inputKey\": \"reception_output\",\n" +
                 "      \"outputKey\": \"translation_result\",\n" +
                 "      \"options\": {\n" +
                 "        \"toggleAble\": true,\n" +
+                "        \"ragReturnType\": null,\n" +
+                "        \"ragK\": 5,\n" +
                 "        \"controlType\": \"auto\",\n" +
                 "        \"outputVisibility\": \"public\",\n" +
+                "        \"examples\": null,\n" +
+                "        \"order\": null,\n" +
+                "        \"disabled\": false,\n" +
+                "        \"locked\": false,\n" +
+                "        \"maxCallsPerParentAgent\": null,\n" +
                 "        \"maxRetries\": 3,\n" +
                 "        \"timeout\": 30000\n" +
                 "      },\n" +
                 "      \"tools\": [\n" +
                 "        {\n" +
-                "          \"name\": \"translator\",\n" +
+                "          \"name\": \"translation_tool\",\n" +
+                "          \"description\": null,\n" +
+                "          \"parameters\": null,\n" +
                 "          \"autoMock\": true\n" +
                 "        }\n" +
                 "      ]\n" +
@@ -154,23 +187,32 @@ class CopilotControllerTest {
                 "      \"name\": \"数据分析Agent\",\n" +
                 "      \"type\": \"react\",\n" +
                 "      \"description\": \"处理数据分析相关的问题。\",\n" +
-                "      \"instructions\": \"你是一个数据分析专家。处理数据分析问题并提供分析结果。\",\n" +
+                "      \"instructions\": \"你是一个数据分析专家。处理数据分析请求并提供分析结果。Return results in this exact format: {'analysis': 'string', 'recommendations': ['string'], 'risk_level': 'high|medium|low'}.\",\n" +
                 "      \"model\": \"qwen-turbo\",\n" +
                 "      \"config\": {\n" +
                 "        \"maxIterations\": 5\n" +
                 "      },\n" +
-                "      \"inputKey\": \"user_request\",\n" +
+                "      \"inputKey\": \"reception_output\",\n" +
                 "      \"outputKey\": \"analysis_result\",\n" +
                 "      \"options\": {\n" +
                 "        \"toggleAble\": true,\n" +
+                "        \"ragReturnType\": null,\n" +
+                "        \"ragK\": 5,\n" +
                 "        \"controlType\": \"auto\",\n" +
                 "        \"outputVisibility\": \"public\",\n" +
+                "        \"examples\": null,\n" +
+                "        \"order\": null,\n" +
+                "        \"disabled\": false,\n" +
+                "        \"locked\": false,\n" +
+                "        \"maxCallsPerParentAgent\": null,\n" +
                 "        \"maxRetries\": 3,\n" +
                 "        \"timeout\": 30000\n" +
                 "      },\n" +
                 "      \"tools\": [\n" +
                 "        {\n" +
                 "          \"name\": \"data_analyzer\",\n" +
+                "          \"description\": null,\n" +
+                "          \"parameters\": null,\n" +
                 "          \"autoMock\": true\n" +
                 "        }\n" +
                 "      ]\n" +
@@ -180,17 +222,24 @@ class CopilotControllerTest {
                 "      \"name\": \"报告生成Agent\",\n" +
                 "      \"type\": \"llm\",\n" +
                 "      \"description\": \"生成最终报告。\",\n" +
-                "      \"instructions\": \"你是一个报告生成专家。根据接收到的结果生成最终报告。\",\n" +
+                "      \"instructions\": \"你是一个报告生成专家。根据收到的数据生成最终报告。提供清晰、详细的报告。You MUST use the following input keys: 'math_solution', 'translation_result', 'analysis_result'. Return results in this exact format: {'report_title': 'string', 'report_content': 'string', 'report_summary': 'string'}.\",\n" +
                 "      \"model\": \"qwen-turbo\",\n" +
                 "      \"config\": {\n" +
                 "        \"maxIterations\": 1\n" +
                 "      },\n" +
-                "      \"inputKey\": \"final_result\",\n" +
+                "      \"inputKey\": \"final_data\",\n" +
                 "      \"outputKey\": \"report\",\n" +
                 "      \"options\": {\n" +
                 "        \"toggleAble\": true,\n" +
+                "        \"ragReturnType\": null,\n" +
+                "        \"ragK\": 5,\n" +
                 "        \"controlType\": \"auto\",\n" +
                 "        \"outputVisibility\": \"public\",\n" +
+                "        \"examples\": null,\n" +
+                "        \"order\": null,\n" +
+                "        \"disabled\": false,\n" +
+                "        \"locked\": false,\n" +
+                "        \"maxCallsPerParentAgent\": null,\n" +
                 "        \"maxRetries\": 3,\n" +
                 "        \"timeout\": 30000\n" +
                 "      },\n" +
@@ -219,9 +268,11 @@ class CopilotControllerTest {
                 "    {\n" +
                 "      \"edgeId\": \"edge3\",\n" +
                 "      \"fromAgentId\": \"request_classifier\",\n" +
-                "      \"toAgentId\": \"math_agent\",\n" +
+                "      \"toAgentId\": \"data_agent\",\n" +
                 "      \"label\": \"数学问题\",\n" +
-                "      \"condition\": {\"request_category\": \"math\"},\n" +
+                "      \"condition\": {\n" +
+                "        \"request_category\": \"math\"\n" +
+                "      },\n" +
                 "      \"edgeType\": \"CONDITIONAL\",\n" +
                 "      \"config\": {}\n" +
                 "    },\n" +
@@ -230,7 +281,9 @@ class CopilotControllerTest {
                 "      \"fromAgentId\": \"request_classifier\",\n" +
                 "      \"toAgentId\": \"translation_agent\",\n" +
                 "      \"label\": \"翻译问题\",\n" +
-                "      \"condition\": {\"request_category\": \"translation\"},\n" +
+                "      \"condition\": {\n" +
+                "        \"request_category\": \"translation\"\n" +
+                "      },\n" +
                 "      \"edgeType\": \"CONDITIONAL\",\n" +
                 "      \"config\": {}\n" +
                 "    },\n" +
@@ -239,13 +292,15 @@ class CopilotControllerTest {
                 "      \"fromAgentId\": \"request_classifier\",\n" +
                 "      \"toAgentId\": \"data_analysis_agent\",\n" +
                 "      \"label\": \"数据分析问题\",\n" +
-                "      \"condition\": {\"request_category\": \"data_analysis\"},\n" +
+                "      \"condition\": {\n" +
+                "        \"request_category\": \"data_analysis\"\n" +
+                "      },\n" +
                 "      \"edgeType\": \"CONDITIONAL\",\n" +
                 "      \"config\": {}\n" +
                 "    },\n" +
                 "    {\n" +
                 "      \"edgeId\": \"edge6\",\n" +
-                "      \"fromAgentId\": \"math_agent\",\n" +
+                "      \"fromAgentId\": \"data_agent\",\n" +
                 "      \"toAgentId\": \"report_generator\",\n" +
                 "      \"label\": \"生成报告\",\n" +
                 "      \"condition\": null,\n" +
@@ -292,14 +347,13 @@ class CopilotControllerTest {
                 "    \"createdAt\": \"2024-01-01T00:00:00Z\",\n" +
                 "    \"lastUpdatedAt\": \"2024-01-01T00:00:00Z\",\n" +
                 "    \"author\": \"AI Assistant\",\n" +
-                "    \"tags\": [\"customer-service\", \"multi-agent-system\", \"workflow\"],\n" +
+                "    \"tags\": [\"customer-service\", \"multi-agent-system\"],\n" +
                 "    \"category\": \"customer-support\",\n" +
                 "    \"customFields\": {\n" +
                 "      \"estimatedDuration\": \"10-20 minutes\",\n" +
                 "      \"complexity\": \"medium\",\n" +
                 "      \"requiredAgents\": 6,\n" +
-                "      \"agentTypes\": [\"llm\", \"react\"],\n" +
-                "      \"features\": [\"Output Constraints\", \"Conditional Routing\", \"Structured Output\"]\n" +
+                "      \"agentTypes\": [\"llm\", \"react\"]\n" +
                 "    }\n" +
                 "  }\n" +
                 "}";

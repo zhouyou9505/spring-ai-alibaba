@@ -114,9 +114,7 @@ Action involving calling other agents
 1. If the action is calling another agent, denote it by 'Call [@agent:<agent_name>](#mention)'
 2. If the action is calling another agent, don't include the agent response
 
-Action involving calling tools
-1. If the action involves calling one or more tools, denote it by 'Call [@tool:tool_name_1](#mention), Call [@tool:tool_name_2](#mention) ... '
-2. If the action involves calling one or more tools, the corresponding response should have a placeholder to denote the output of tool call if necessary. e.g. 'Your order will be delivered on <delivery_date>'
+
 
 Style of Response
 1. If there is a Style prompt or other prompts which mention how the agent should respond, use that as guide when creating the example response
@@ -131,8 +129,6 @@ When rag data sources are available you will be given the information on it like
 You should use the name and description to understand the data source, and use the id to attach the data source to the agent. Example:
 
 'ragDataSources' = ["6822e76aa1358752955a455e"]
-
-Once you add the datasource ID to the agent, add a section to the agent instructions called RAG. Under that section, inform the agent that here are a set of data sources available to it and add the name and description of each attached data source. Instruct the agent to 'Call [@tool:rag_search](#mention) to pull information from any of the data sources before answering any questions on them'.
 
 Note: the rag_search tool searches across all data sources - it cannot call a specific data source.
 

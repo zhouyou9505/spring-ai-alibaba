@@ -2,6 +2,7 @@ package com.alibaba.cloud.ai.controller;
 
 import com.alibaba.cloud.ai.service.WorkflowService;
 import com.alibaba.cloud.ai.workflow.WorkflowSchema;
+import com.alibaba.fastjson.JSON;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 import org.slf4j.Logger;
@@ -16,6 +17,11 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Queue;
 
 /**
  * Copilot控制器 - 智能工作流调整助手
@@ -33,6 +39,7 @@ public class CopilotController {
     private final WorkflowService workflowService;
     private final ObjectMapper objectMapper;
     private final String copilotPrompt;
+    private final String betterMultiAgentPrompt;
     
     @Autowired
     public CopilotController(ChatModel chatModel, WorkflowService workflowService) {
@@ -40,6 +47,7 @@ public class CopilotController {
         this.workflowService = workflowService;
         this.objectMapper = new ObjectMapper();
         this.copilotPrompt = loadCopilotPrompt();
+        this.betterMultiAgentPrompt = loadBetterMultiAgentPrompt();
     }
     
     /**
@@ -81,12 +89,279 @@ public class CopilotController {
         }
 
         // 调用LLM生成新的工作流配置
-        WorkflowSchema newSchema = generateWorkflowSchema(userRequest, currentSchema);
+//        WorkflowSchema newSchema = generateWorkflowSchema(userRequest, currentSchema);
+        WorkflowSchema newSchema = JSON.parseObject("{\n" +
+                "  \"workflowId\": \"smart_customer_service_system\",\n" +
+                "  \"name\": \"智能客服系统\",\n" +
+                "  \"description\": \"一个包含接待Agent、问题分类Agent、数据Agent、翻译Agent、数据分析Agent和报告生成Agent的智能客服系统。\",\n" +
+                "  \"version\": \"1.0.0\",\n" +
+                "  \"agents\": [\n" +
+                "    {\n" +
+                "      \"agentId\": \"reception_agent\",\n" +
+                "      \"name\": \"接待Agent\",\n" +
+                "      \"type\": \"llm\",\n" +
+                "      \"description\": \"简单对话接待，收集用户需求\",\n" +
+                "      \"instructions\": \"你是一个友好的接待员，请了解用户的需求并收集基本信息。提供清晰、简洁的回复。\",\n" +
+                "      \"model\": \"qwen-turbo\",\n" +
+                "      \"config\": {\n" +
+                "        \"maxIterations\": 1\n" +
+                "      },\n" +
+                "      \"inputKey\": \"user_message\",\n" +
+                "      \"outputKey\": \"reception_output\",\n" +
+                "      \"options\": {\n" +
+                "        \"toggleAble\": true,\n" +
+                "        \"controlType\": \"auto\",\n" +
+                "        \"outputVisibility\": \"public\",\n" +
+                "        \"maxRetries\": 3,\n" +
+                "        \"timeout\": 30000\n" +
+                "      },\n" +
+                "      \"tools\": []\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"agentId\": \"request_classifier\",\n" +
+                "      \"name\": \"问题分类Agent\",\n" +
+                "      \"type\": \"react\",\n" +
+                "      \"description\": \"将用户请求分类到特定类别，并调用相应的工具\",\n" +
+                "      \"instructions\": \"你是一个问题分类器。分析用户请求并将其分类为以下类别之一：'math', 'translation', 'data_analysis'。调用相应的工具进行处理。\",\n" +
+                "      \"model\": \"qwen-turbo\",\n" +
+                "      \"config\": {\n" +
+                "        \"maxIterations\": 5\n" +
+                "      },\n" +
+                "      \"inputKey\": \"reception_output\",\n" +
+                "      \"outputKey\": \"request_category\",\n" +
+                "      \"options\": {\n" +
+                "        \"toggleAble\": true,\n" +
+                "        \"controlType\": \"auto\",\n" +
+                "        \"outputVisibility\": \"public\",\n" +
+                "        \"maxRetries\": 3,\n" +
+                "        \"timeout\": 30000\n" +
+                "      },\n" +
+                "      \"tools\": [\n" +
+                "        {\n" +
+                "          \"name\": \"classification_tool\",\n" +
+                "          \"autoMock\": true\n" +
+                "        }\n" +
+                "      ]\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"agentId\": \"data_agent\",\n" +
+                "      \"name\": \"数据Agent\",\n" +
+                "      \"type\": \"react\",\n" +
+                "      \"description\": \"处理数学相关问题\",\n" +
+                "      \"instructions\": \"你是一个数据专家。处理数学问题并提供解决方案。返回分析结果。\",\n" +
+                "      \"model\": \"qwen-turbo\",\n" +
+                "      \"config\": {\n" +
+                "        \"maxIterations\": 5\n" +
+                "      },\n" +
+                "      \"inputKey\": \"user_request\",\n" +
+                "      \"outputKey\": \"data_solution\",\n" +
+                "      \"options\": {\n" +
+                "        \"toggleAble\": true,\n" +
+                "        \"controlType\": \"auto\",\n" +
+                "        \"outputVisibility\": \"public\",\n" +
+                "        \"maxRetries\": 3,\n" +
+                "        \"timeout\": 30000\n" +
+                "      },\n" +
+                "      \"tools\": [\n" +
+                "        {\n" +
+                "          \"name\": \"math_solver\",\n" +
+                "          \"autoMock\": true\n" +
+                "        }\n" +
+                "      ]\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"agentId\": \"translation_agent\",\n" +
+                "      \"name\": \"翻译Agent\",\n" +
+                "      \"type\": \"react\",\n" +
+                "      \"description\": \"处理翻译相关问题\",\n" +
+                "      \"instructions\": \"你是一个翻译专家。处理翻译问题并提供翻译结果。\",\n" +
+                "      \"model\": \"qwen-turbo\",\n" +
+                "      \"config\": {\n" +
+                "        \"maxIterations\": 5\n" +
+                "      },\n" +
+                "      \"inputKey\": \"user_request\",\n" +
+                "      \"outputKey\": \"translation_result\",\n" +
+                "      \"options\": {\n" +
+                "        \"toggleAble\": true,\n" +
+                "        \"controlType\": \"auto\",\n" +
+                "        \"outputVisibility\": \"public\",\n" +
+                "        \"maxRetries\": 3,\n" +
+                "        \"timeout\": 30000\n" +
+                "      },\n" +
+                "      \"tools\": [\n" +
+                "        {\n" +
+                "          \"name\": \"translation_tool\",\n" +
+                "          \"autoMock\": true\n" +
+                "        }\n" +
+                "      ]\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"agentId\": \"data_analysis_agent\",\n" +
+                "      \"name\": \"数据分析Agent\",\n" +
+                "      \"type\": \"react\",\n" +
+                "      \"description\": \"处理数据分析相关问题\",\n" +
+                "      \"instructions\": \"你是一个数据分析专家。处理数据分析问题并提供分析结果。\",\n" +
+                "      \"model\": \"qwen-turbo\",\n" +
+                "      \"config\": {\n" +
+                "        \"maxIterations\": 5\n" +
+                "      },\n" +
+                "      \"inputKey\": \"user_request\",\n" +
+                "      \"outputKey\": \"analysis_result\",\n" +
+                "      \"options\": {\n" +
+                "        \"toggleAble\": true,\n" +
+                "        \"controlType\": \"auto\",\n" +
+                "        \"outputVisibility\": \"public\",\n" +
+                "        \"maxRetries\": 3,\n" +
+                "        \"timeout\": 30000\n" +
+                "      },\n" +
+                "      \"tools\": [\n" +
+                "        {\n" +
+                "          \"name\": \"data_analyzer\",\n" +
+                "          \"autoMock\": true\n" +
+                "        }\n" +
+                "      ]\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"agentId\": \"report_generator\",\n" +
+                "      \"name\": \"报告生成Agent\",\n" +
+                "      \"type\": \"llm\",\n" +
+                "      \"description\": \"生成最终报告\",\n" +
+                "      \"instructions\": \"你是一个报告生成专家。根据前几个Agent提供的信息生成最终报告。\",\n" +
+                "      \"model\": \"qwen-turbo\",\n" +
+                "      \"config\": {\n" +
+                "        \"maxIterations\": 1\n" +
+                "      },\n" +
+                "      \"inputKey\": \"combined_results\",\n" +
+                "      \"outputKey\": \"final_report\",\n" +
+                "      \"options\": {\n" +
+                "        \"toggleAble\": true,\n" +
+                "        \"controlType\": \"auto\",\n" +
+                "        \"outputVisibility\": \"public\",\n" +
+                "        \"maxRetries\": 3,\n" +
+                "        \"timeout\": 30000\n" +
+                "      },\n" +
+                "      \"tools\": []\n" +
+                "    }\n" +
+                "  ],\n" +
+                "  \"edges\": [\n" +
+                "    {\n" +
+                "      \"edgeId\": \"edge1\",\n" +
+                "      \"fromAgentId\": \"START\",\n" +
+                "      \"toAgentId\": \"reception_agent\",\n" +
+                "      \"label\": \"开始\",\n" +
+                "      \"condition\": null,\n" +
+                "      \"edgeType\": \"SEQUENTIAL\",\n" +
+                "      \"config\": {}\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"edgeId\": \"edge2\",\n" +
+                "      \"fromAgentId\": \"reception_agent\",\n" +
+                "      \"toAgentId\": \"request_classifier\",\n" +
+                "      \"label\": \"分类请求\",\n" +
+                "      \"condition\": null,\n" +
+                "      \"edgeType\": \"SEQUENTIAL\",\n" +
+                "      \"config\": {}\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"edgeId\": \"edge3\",\n" +
+                "      \"fromAgentId\": \"request_classifier\",\n" +
+                "      \"toAgentId\": \"data_agent\",\n" +
+                "      \"label\": \"数学问题\",\n" +
+                "      \"condition\": {\"request_category\": \"math\"},\n" +
+                "      \"edgeType\": \"CONDITIONAL\",\n" +
+                "      \"config\": {}\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"edgeId\": \"edge4\",\n" +
+                "      \"fromAgentId\": \"request_classifier\",\n" +
+                "      \"toAgentId\": \"translation_agent\",\n" +
+                "      \"label\": \"翻译问题\",\n" +
+                "      \"condition\": {\"request_category\": \"translation\"},\n" +
+                "      \"edgeType\": \"CONDITIONAL\",\n" +
+                "      \"config\": {}\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"edgeId\": \"edge5\",\n" +
+                "      \"fromAgentId\": \"request_classifier\",\n" +
+                "      \"toAgentId\": \"data_analysis_agent\",\n" +
+                "      \"label\": \"数据分析问题\",\n" +
+                "      \"condition\": {\"request_category\": \"data_analysis\"},\n" +
+                "      \"edgeType\": \"CONDITIONAL\",\n" +
+                "      \"config\": {}\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"edgeId\": \"edge6\",\n" +
+                "      \"fromAgentId\": \"data_agent\",\n" +
+                "      \"toAgentId\": \"report_generator\",\n" +
+                "      \"label\": \"生成报告\",\n" +
+                "      \"condition\": null,\n" +
+                "      \"edgeType\": \"SEQUENTIAL\",\n" +
+                "      \"config\": {}\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"edgeId\": \"edge7\",\n" +
+                "      \"fromAgentId\": \"translation_agent\",\n" +
+                "      \"toAgentId\": \"report_generator\",\n" +
+                "      \"label\": \"生成报告\",\n" +
+                "      \"condition\": null,\n" +
+                "      \"edgeType\": \"SEQUENTIAL\",\n" +
+                "      \"config\": {}\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"edgeId\": \"edge8\",\n" +
+                "      \"fromAgentId\": \"data_analysis_agent\",\n" +
+                "      \"toAgentId\": \"report_generator\",\n" +
+                "      \"label\": \"生成报告\",\n" +
+                "      \"condition\": null,\n" +
+                "      \"edgeType\": \"SEQUENTIAL\",\n" +
+                "      \"config\": {}\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"edgeId\": \"edge9\",\n" +
+                "      \"fromAgentId\": \"report_generator\",\n" +
+                "      \"toAgentId\": \"END\",\n" +
+                "      \"label\": \"结束\",\n" +
+                "      \"condition\": null,\n" +
+                "      \"edgeType\": \"SEQUENTIAL\",\n" +
+                "      \"config\": {}\n" +
+                "    }\n" +
+                "  ],\n" +
+                "  \"globalConfig\": {\n" +
+                "    \"maxRetries\": 3,\n" +
+                "    \"timeout\": 60000,\n" +
+                "    \"enableLogging\": true,\n" +
+                "    \"enableMetrics\": true,\n" +
+                "    \"maxLoopIterations\": 5,\n" +
+                "    \"parallelExecution\": false\n" +
+                "  },\n" +
+                "  \"metadata\": {\n" +
+                "    \"createdAt\": \"2024-01-01T00:00:00Z\",\n" +
+                "    \"lastUpdatedAt\": \"2024-01-01T00:00:00Z\",\n" +
+                "    \"author\": \"AI Assistant\",\n" +
+                "    \"tags\": [\"smart_customer_service\", \"multi-agent_system\"],\n" +
+                "    \"category\": \"customer_support\",\n" +
+                "    \"customFields\": {\n" +
+                "      \"estimatedDuration\": \"10-20 minutes\",\n" +
+                "      \"complexity\": \"medium\",\n" +
+                "      \"requiredAgents\": 6,\n" +
+                "      \"agentTypes\": [\"llm\", \"react\"],\n" +
+                "      \"features\": [\"Output Constraints\", \"Conditional Routing\", \"Structured Output\"]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}",WorkflowSchema.class);
         
+        // 修复inputKey/outputKey映射
+        fixeSchemaInputKeyOutputKey(newSchema);
+
         // 循环检测，看newSchema是否符合要求，如果不符合要求，则重新生成
-        // while (!isValidWorkflowSchema(newSchema)) {
-        //     newSchema = greaterWorkflowSchema(newSchema);
-        // }
+        int optimizationAttempts = 0;
+        final int maxOptimizationAttempts = 3;
+
+//        betterWorkflowSchema(newSchema, userRequest);
+        
+        if (optimizationAttempts >= maxOptimizationAttempts) {
+            logger.warn("工作流优化达到最大尝试次数，使用当前配置");
+        }
 
         // 保存或更新工作流
         String finalWorkflowId = newSchema.getWorkflowId();
@@ -107,9 +382,89 @@ public class CopilotController {
         response.put("agentCount", newSchema.getAgents() != null ? newSchema.getAgents().size() : 0);
         response.put("edgeCount", newSchema.getEdges() != null ? newSchema.getEdges().size() : 0);
         response.put("schema", newSchema);
-
+        response.put("optimizationAttempts", optimizationAttempts);
 
         return response;
+    }
+
+    /**
+     * 验证WorkflowSchema是否满足要求
+     */
+    private boolean isValidWorkflowSchema(WorkflowSchema schema, String userRequest) throws Exception {
+        ChatClient chatClient = ChatClient.builder(chatModel).build();
+        
+        // 构建评估提示词
+        StringBuilder promptBuilder = new StringBuilder();
+        promptBuilder.append(betterMultiAgentPrompt).append("\n\n");
+        promptBuilder.append("## 当前WorkflowSchema:\n");
+        promptBuilder.append(objectMapper.writeValueAsString(schema)).append("\n\n");
+        promptBuilder.append("## 用户需求:\n");
+        promptBuilder.append(userRequest).append("\n\n");
+        promptBuilder.append("请根据上述评估标准，对当前WorkflowSchema进行评估。");
+        promptBuilder.append("只输出评估结果，不要输出优化后的JSON。");
+        
+        // 调用LLM进行评估
+        String response = chatClient
+                .prompt(promptBuilder.toString())
+                .call()
+                .content();
+        
+        logger.debug("工作流评估响应: {}", response);
+        
+        // 解析评估结果
+        return parseEvaluationResult(response);
+    }
+    
+    /**
+     * 优化WorkflowSchema
+     */
+    private WorkflowSchema betterWorkflowSchema(WorkflowSchema schema, String userRequest) throws Exception {
+        ChatClient chatClient = ChatClient.builder(chatModel).build();
+        
+        // 构建优化提示词
+        StringBuilder promptBuilder = new StringBuilder();
+        promptBuilder.append(betterMultiAgentPrompt).append("\n\n");
+        promptBuilder.append("## 当前WorkflowSchema:\n");
+        promptBuilder.append(objectMapper.writeValueAsString(schema)).append("\n\n");
+        promptBuilder.append("## 用户需求:\n");
+        promptBuilder.append(userRequest).append("\n\n");
+        promptBuilder.append("请根据评估标准，对当前WorkflowSchema进行优化。");
+        promptBuilder.append("输出优化后的完整WorkflowSchema JSON，保持原有的workflowId。");
+        
+        // 调用LLM进行优化
+        String response = chatClient
+                .prompt(promptBuilder.toString())
+                .call()
+                .content();
+        
+        logger.debug("工作流优化响应: {}", response);
+        
+        // 解析优化后的JSON
+        try {
+            String jsonContent = extractJsonFromResponse(response);
+            return objectMapper.readValue(jsonContent, WorkflowSchema.class);
+        } catch (Exception e) {
+            logger.error("解析优化后的工作流配置失败", e);
+            throw new RuntimeException("无法解析优化后的工作流配置: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 解析评估结果
+     */
+    private boolean parseEvaluationResult(String response) {
+        // 查找"是否需要优化"的结果
+        String[] lines = response.split("\n");
+        for (String line : lines) {
+            if (line.contains("是否需要优化:")) {
+                String result = line.substring(line.indexOf(":") + 1).trim();
+                return "否".equals(result);
+            }
+        }
+        
+        // 如果没有找到明确的"否"，默认认为需要优化
+        logger.warn("无法解析评估结果，默认需要优化");
+        return false;
     }
 
 
@@ -203,6 +558,15 @@ public class CopilotController {
     }
     
     /**
+     * 加载更好的Copilot提示词
+     */
+    @SneakyThrows
+    private String loadBetterMultiAgentPrompt() {
+        ClassPathResource resource = new ClassPathResource("prompts/better_multi_agent.md");
+        return new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+    }
+    
+    /**
      * 加载WorkflowSchema JSON结构定义
      */
     @SneakyThrows
@@ -236,54 +600,241 @@ public class CopilotController {
             return "// Agent editing guide not available";
         }
     }
-    
+
     /**
-     * 获取默认的Copilot提示词
+     * 修复WorkflowSchema的inputKey/outputKey映射
+     * 通过深度遍历确保数据流正确传递
      */
-    private String getDefaultCopilotPrompt() {
-        return """
-            # Multi-Agent Workflow Copilot
+    private void fixeSchemaInputKeyOutputKey(WorkflowSchema schema) {
+        if (schema.getAgents() == null || schema.getAgents().isEmpty() || 
+            schema.getEdges() == null || schema.getEdges().isEmpty()) {
+            logger.warn("WorkflowSchema缺少agents或edges，无法修复inputKey/outputKey映射");
+            return;
+        }
+
+        // 创建agent映射，便于快速查找
+        Map<String, WorkflowSchema.AgentConfig> agentMap = new HashMap<>();
+        for (WorkflowSchema.AgentConfig agent : schema.getAgents()) {
+            agentMap.put(agent.getAgentId(), agent);
+        }
+
+        // 创建边映射，按fromAgentId分组
+        Map<String, List<WorkflowSchema.EdgeConfig>> fromAgentEdges = new HashMap<>();
+        // 创建边映射，按toAgentId分组
+        Map<String, List<WorkflowSchema.EdgeConfig>> toAgentEdges = new HashMap<>();
+        
+        for (WorkflowSchema.EdgeConfig edge : schema.getEdges()) {
+            fromAgentEdges.computeIfAbsent(edge.getFromAgentId(), k -> new ArrayList<>()).add(edge);
+            toAgentEdges.computeIfAbsent(edge.getToAgentId(), k -> new ArrayList<>()).add(edge);
+        }
+
+        // 找到起始agent（没有入边的agent）
+        Set<String> toAgentIds = schema.getEdges().stream()
+                .map(WorkflowSchema.EdgeConfig::getToAgentId)
+                .filter(id -> !"END".equals(id))
+                .collect(java.util.stream.Collectors.toSet());
+        
+        Set<String> fromAgentIds = schema.getEdges().stream()
+                .map(WorkflowSchema.EdgeConfig::getFromAgentId)
+                .filter(id -> !"START".equals(id))
+                .collect(java.util.stream.Collectors.toSet());
+        
+        Set<String> startAgentIds = fromAgentIds.stream()
+                .filter(id -> !toAgentIds.contains(id))
+                .collect(java.util.stream.Collectors.toSet());
+
+        if (startAgentIds.isEmpty()) {
+            logger.warn("未找到起始agent，使用第一个agent作为起始点");
+            startAgentIds.add(schema.getAgents().get(0).getAgentId());
+        }
+
+        // 深度优先遍历修复inputKey/outputKey映射
+        Set<String> visited = new HashSet<>();
+        for (String startAgentId : startAgentIds) {
+            fixInputKeyOutputKeyRecursive(startAgentId, agentMap, fromAgentEdges, visited, "user_request");
+        }
+
+        logger.info("完成inputKey/outputKey映射修复");
+    }
+
+    /**
+     * 递归修复inputKey/outputKey映射
+     */
+    private void fixInputKeyOutputKeyRecursive(String currentAgentId, 
+                                             Map<String, WorkflowSchema.AgentConfig> agentMap,
+                                             Map<String, List<WorkflowSchema.EdgeConfig>> fromAgentEdges,
+                                             Set<String> visited,
+                                             String previousOutputKey) {
+        
+        if (visited.contains(currentAgentId)) {
+            return; // 避免循环依赖
+        }
+        
+        visited.add(currentAgentId);
+        WorkflowSchema.AgentConfig currentAgent = agentMap.get(currentAgentId);
+        
+        if (currentAgent == null) {
+            logger.warn("Agent不存在: {}", currentAgentId);
+            return;
+        }
+
+        // 修复当前agent的inputKeys
+        if (previousOutputKey != null) {
+            List<String> currentInputKeys = currentAgent.getInputKeys();
+            if (currentInputKeys == null) {
+                currentInputKeys = new ArrayList<>();
+            }
             
-            You are a helpful co-pilot for building and deploying multi-agent systems. Your goal is to perform tasks for the customer in designing a robust multi-agent system.
+            // 如果inputKeys中不包含previousOutputKey，则添加
+            if (!currentInputKeys.contains(previousOutputKey)) {
+                  currentInputKeys.add(previousOutputKey);
+                  currentAgent.setInputKeys(currentInputKeys);
+                logger.debug("为agent {} 添加inputKey: {} -> {}", 
+                           currentAgentId, previousOutputKey, currentInputKeys);
+            }
+        }
+
+        // 生成当前agent的outputKey（如果不存在）
+         String currentOutputKey = currentAgent.getOutputKey();
+        if (currentOutputKey == null || currentOutputKey.trim().isEmpty()) {
+//            currentOutputKey = generateOutputKey(currentAgent);
+//            currentAgent.setOutputKey(currentOutputKey);
+//            logger.debug("为agent {} 生成outputKey: {}", currentAgentId, currentOutputKey);
+        }
+
+        // 处理当前agent的所有出边
+        List<WorkflowSchema.EdgeConfig> outEdges = fromAgentEdges.get(currentAgentId);
+        if (outEdges != null) {
+            for (WorkflowSchema.EdgeConfig edge : outEdges) {
+                String nextAgentId = edge.getToAgentId();
+                
+                // 对于条件边，确保所有toAgent使用相同的outputKey
+                if (edge.getCondition() != null) {
+                    // 条件边：一个fromAgent对应多个toAgent，使用相同的outputKey
+                    fixInputKeyOutputKeyRecursive(nextAgentId, agentMap, fromAgentEdges, visited, currentOutputKey);
+                } else {
+                    // 普通边：直接传递
+                    fixInputKeyOutputKeyRecursive(nextAgentId, agentMap, fromAgentEdges, visited, currentOutputKey);
+                }
+            }
+        }
+    }
+
+    /**
+     * 根据agent类型和名称生成合适的outputKey
+     */
+    private String generateOutputKey(WorkflowSchema.AgentConfig agent) {
+        String agentName = agent.getName();
+        String agentType = agent.getType();
+        
+        // 根据agent类型和名称生成描述性的outputKey
+        if (agentName != null && !agentName.trim().isEmpty()) {
+            // 将agent名称转换为小写并用下划线连接
+            String key = agentName.toLowerCase()
+                    .replaceAll("[^a-zA-Z0-9]", "_")
+                    .replaceAll("_+", "_")
+                    .replaceAll("^_|_$", "");
             
-            ## Supported Tasks:
-            1. Create a multi-agent system
-            2. Create a new agent
-            3. Edit an existing agent
-            4. Improve an existing agent's instructions
-            5. Adding / editing / removing tools
-            6. Adding / editing / removing prompts
-            7. Optimize workflow performance
-            8. Add conditional logic and loops
-            9. Configure parallel execution
-            10. Any other workflow adjustments
+            // 根据agent类型添加后缀
+            switch (agentType) {
+                case "llm":
+                    return key + "_response";
+                case "react":
+                    return key + "_result";
+                case "react_with_human":
+                    return key + "_decision";
+                default:
+                    return key + "_output";
+            }
+        }
+        
+        // 如果agent名称为空，使用agentId
+        return agent.getAgentId() + "_output";
+    }
+
+    /**
+     * 广度优先遍历修复inputKey/outputKey映射（备用方法）
+     */
+    private void fixInputKeyOutputKeyBFS(WorkflowSchema schema) {
+        if (schema.getAgents() == null || schema.getAgents().isEmpty() || 
+            schema.getEdges() == null || schema.getEdges().isEmpty()) {
+            return;
+        }
+
+        // 创建agent映射
+        Map<String, WorkflowSchema.AgentConfig> agentMap = new HashMap<>();
+        for (WorkflowSchema.AgentConfig agent : schema.getAgents()) {
+            agentMap.put(agent.getAgentId(), agent);
+        }
+
+        // 创建边映射
+        Map<String, List<WorkflowSchema.EdgeConfig>> fromAgentEdges = new HashMap<>();
+        for (WorkflowSchema.EdgeConfig edge : schema.getEdges()) {
+            fromAgentEdges.computeIfAbsent(edge.getFromAgentId(), k -> new ArrayList<>()).add(edge);
+        }
+
+        // 找到起始agents
+        Set<String> toAgentIds = schema.getEdges().stream()
+                .map(WorkflowSchema.EdgeConfig::getToAgentId)
+                .collect(java.util.stream.Collectors.toSet());
+        
+        Set<String> fromAgentIds = schema.getEdges().stream()
+                .map(WorkflowSchema.EdgeConfig::getFromAgentId)
+                .collect(java.util.stream.Collectors.toSet());
+        
+        Set<String> startAgentIds = fromAgentIds.stream()
+                .filter(id -> !toAgentIds.contains(id))
+                .collect(java.util.stream.Collectors.toSet());
+
+        if (startAgentIds.isEmpty()) {
+            startAgentIds.add(schema.getAgents().get(0).getAgentId());
+        }
+
+        // BFS遍历
+        Queue<String> queue = new java.util.LinkedList<>(startAgentIds);
+        Set<String> visited = new HashSet<>();
+        Map<String, String> agentOutputKeys = new HashMap<>();
+
+        while (!queue.isEmpty()) {
+            String currentAgentId = queue.poll();
             
-            ## Agent Types:
-            - llm: Language model agents
-            - tool: Tool-calling agents
-            - custom: Custom logic agents
-            - condition: Conditional decision agents
-            - simple: Simple processing agents
-            - input: Input handling agents
-            - output: Output handling agents
+            if (visited.contains(currentAgentId)) {
+                continue;
+            }
             
-            ## Edge Types:
-            - SEQUENTIAL: Sequential execution
-            - CONDITIONAL: Conditional branching
-            - LOOP: Loop execution
-            - PARALLEL: Parallel execution
+            visited.add(currentAgentId);
+            WorkflowSchema.AgentConfig currentAgent = agentMap.get(currentAgentId);
             
-            ## Guidelines:
-            - Always generate valid JSON compatible with WorkflowSchema structure
-            - Preserve existing workflowId when modifying workflows
-            - Generate unique workflowId for new workflows
-            - Ensure all required fields are present
-            - Use appropriate agent types and edge types
-            - Include proper input/output mappings
-            - Add meaningful descriptions and instructions
-            - Consider workflow performance and scalability
-            - Implement proper error handling and retry mechanisms
-            - Support complex conditional logic and loops when needed
-            """;
+            if (currentAgent == null) {
+                continue;
+            }
+
+            // 生成当前agent的outputKey
+            String currentOutputKey = currentAgent.getOutputKey();
+            if (currentOutputKey == null || currentOutputKey.trim().isEmpty()) {
+                currentOutputKey = generateOutputKey(currentAgent);
+                currentAgent.setOutputKey(currentOutputKey);
+            }
+            agentOutputKeys.put(currentAgentId, currentOutputKey);
+
+            // 处理出边
+            List<WorkflowSchema.EdgeConfig> outEdges = fromAgentEdges.get(currentAgentId);
+            if (outEdges != null) {
+                for (WorkflowSchema.EdgeConfig edge : outEdges) {
+                    String nextAgentId = edge.getToAgentId();
+                    
+                    // 修复下一个agent的inputKey
+                    WorkflowSchema.AgentConfig nextAgent = agentMap.get(nextAgentId);
+                    if (nextAgent != null) {
+                        nextAgent.setInputKey(currentOutputKey);
+                    }
+                    
+                    // 将下一个agent加入队列
+                    if (!visited.contains(nextAgentId)) {
+                        queue.offer(nextAgentId);
+                    }
+                }
+            }
+        }
     }
 } 

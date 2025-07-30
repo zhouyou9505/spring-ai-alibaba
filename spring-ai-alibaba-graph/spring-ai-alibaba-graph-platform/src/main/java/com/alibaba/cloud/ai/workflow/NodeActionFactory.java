@@ -89,7 +89,12 @@ public class NodeActionFactory {
 
         try {
             // 获取输入输出键
-            String inputKey = agentConfig.getInputKey() != null ? agentConfig.getInputKey() : "input";
+            List<String> inputKeys = agentConfig.getInputKeys();
+            if (inputKeys == null || inputKeys.isEmpty()) {
+                inputKeys = List.of("input");
+            }
+            // LLM Agent只使用第一个inputKey
+            String inputKey = inputKeys.get(0);
             String outputKey = agentConfig.getOutputKey() != null ? agentConfig.getOutputKey() : "output";
 
             // 创建 LlmNode
@@ -153,8 +158,15 @@ public class NodeActionFactory {
 
             // 编译并返回 NodeAction
             reactAgent.getAndCompileGraph();
+            
+            // 获取inputKeys，如果为空则使用默认值
+            List<String> inputKeys = agentConfig.getInputKeys();
+            if (inputKeys == null || inputKeys.isEmpty()) {
+                inputKeys = List.of("input");
+            }
+            
             return reactAgent.asNodeAction(
-                    List.of(agentConfig.getInputKey(), "user_request"),
+                    inputKeys,
                     agentConfig.getOutputKey() != null ? agentConfig.getOutputKey() : "output"
             );
 
@@ -208,8 +220,18 @@ public class NodeActionFactory {
 
             // 编译并返回 NodeAction
             reactAgentWithHuman.getAndCompileGraph();
+            
+            // 获取inputKeys，如果为空则使用默认值
+            List<String> inputKeys = agentConfig.getInputKeys();
+            if (inputKeys == null || inputKeys.isEmpty()) {
+                inputKeys = List.of("input");
+            }
+            
+            // ReactAgentWithHuman目前只支持单个inputKey，取第一个
+            String inputKey = inputKeys.get(0);
+            
             NodeActionWithConfig nodeActionWithConfig = reactAgentWithHuman.asNodeAction(
-                    agentConfig.getInputKey() != null ? agentConfig.getInputKey() : "input",
+                    inputKey,
                     agentConfig.getOutputKey() != null ? agentConfig.getOutputKey() : "output"
             );
 
@@ -275,7 +297,12 @@ public class NodeActionFactory {
                 public Map<String, Object> apply(OverAllState state) throws Exception {
                     // 这里需要根据实际需求实现
                     // 暂时返回一个简单的实现
-                    String inputKey = agentConfig.getInputKey() != null ? agentConfig.getInputKey() : "input";
+                    List<String> inputKeys = agentConfig.getInputKeys();
+                    if (inputKeys == null || inputKeys.isEmpty()) {
+                        inputKeys = List.of("input");
+                    }
+                    // ReflectAgent只使用第一个inputKey
+                    String inputKey = inputKeys.get(0);
                     String outputKey = agentConfig.getOutputKey() != null ? agentConfig.getOutputKey() : "output";
 
                     Object input = processInput(state, inputKey);
@@ -327,7 +354,12 @@ public class NodeActionFactory {
         return new NodeAction() {
             @Override
             public Map<String, Object> apply(OverAllState state) throws Exception {
-                String inputKey = agentConfig.getInputKey() != null ? agentConfig.getInputKey() : "input";
+                List<String> inputKeys = agentConfig.getInputKeys();
+                if (inputKeys == null || inputKeys.isEmpty()) {
+                    inputKeys = List.of("input");
+                }
+                // 只使用第一个inputKey
+                String inputKey = inputKeys.get(0);
                 String outputKey = agentConfig.getOutputKey() != null ? agentConfig.getOutputKey() : "output";
 
                 Object input = processInput(state, inputKey);
@@ -344,7 +376,12 @@ public class NodeActionFactory {
         return new NodeAction() {
             @Override
             public Map<String, Object> apply(OverAllState state) throws Exception {
-                String inputKey = agentConfig.getInputKey() != null ? agentConfig.getInputKey() : "input";
+                List<String> inputKeys = agentConfig.getInputKeys();
+                if (inputKeys == null || inputKeys.isEmpty()) {
+                    inputKeys = List.of("input");
+                }
+                // 只使用第一个inputKey
+                String inputKey = inputKeys.get(0);
                 String outputKey = agentConfig.getOutputKey() != null ? agentConfig.getOutputKey() : "output";
 
                 Object input = processInput(state, inputKey);
