@@ -366,6 +366,8 @@ public class ReactAgent {
 
 		private ChatClient chatClient;
 
+		private String llmMessageKey = "messages";
+
 		private List<ToolCallback> tools;
 
 		private ToolCallbackResolver resolver;
@@ -397,6 +399,12 @@ public class ReactAgent {
 			this.chatClient = chatClient;
 			return this;
 		}
+
+		public Builder llmMessageKey(String llmMessageKey) {
+			this.llmMessageKey = llmMessageKey;
+			return this;
+		}
+
 
 		public Builder tools(List<ToolCallback> tools) {
 			this.tools = tools;
@@ -456,7 +464,7 @@ public class ReactAgent {
 
 		public ReactAgent build() throws GraphStateException {
 			LlmNode llmNode = LlmNode.builder().chatClient(chatClient)
-					.toolCallbacks(tools).systemPromptTemplate(instruction).messagesKey("messages").build();
+					.toolCallbacks(tools).systemPromptTemplate(instruction).messagesKey(llmMessageKey).build();
 			ToolNode toolNode = null;
 			if (resolver != null) {
 				toolNode = ToolNode.builder().toolCallbackResolver(resolver).build();
@@ -494,7 +502,7 @@ public class ReactAgent {
 			// prepare input for child graph
 			List<Message> messages = new ArrayList<>();
 
-			// 遍历所有输入键，将对应的值添加到messages中
+			// 遍历所有输入键，将对应的值添加到messa eges中
 			for (String inputKey : inputKeyFromParent) {
 				Object input = parentState.value(inputKey).orElseThrow();
 

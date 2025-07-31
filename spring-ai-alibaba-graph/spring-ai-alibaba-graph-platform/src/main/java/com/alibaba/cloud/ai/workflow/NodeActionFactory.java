@@ -8,12 +8,12 @@ import com.alibaba.cloud.ai.graph.agent.ReactAgentWithHuman;
 import com.alibaba.cloud.ai.graph.agent.ReflectAgent;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.node.LlmNode;
+import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import com.alibaba.cloud.ai.service.MockToolCallback;
 import com.alibaba.cloud.ai.service.SearchTool;
 import com.alibaba.cloud.ai.service.ToolFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.model.ChatModel;
@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 import static com.alibaba.cloud.ai.service.ToolFactory.registerTool;
 
@@ -159,9 +160,33 @@ public class NodeActionFactory {
             ReactAgent reactAgent = ReactAgent.builder()
                     .name(agentConfig.getName())
                     .chatClient(chatClient)
+                    .llmMessageKey("llm_input_messages")
                     .tools(toolCallbacks)
+                    .preLlmHook(state -> {
+
+                        state.registerKeyAndStrategy("llm_input_messages",new ReplaceStrategy());
+
+                        // 从状态中获取完整的消息历史
+                        List<Message> messages = (List<Message>) state.value("messages").orElseThrow();
+
+                        // 剪枝逻辑：只保留最后两条消息
+                        List<Message> prunedMessages = new ArrayList<>();
+                        if (messages.size() >= 2) {
+                            // 保留最后两条消息
+                            prunedMessages.add(messages.get(messages.size() - 2));
+                            prunedMessages.add(messages.get(messages.size() - 1));
+                        } else {
+                            // 如果消息数量少于2条，保留所有消息
+                            prunedMessages.addAll(messages);
+                        }
+
+                        // 将剪枝后的消息存储到 llm_input_messages 键中
+                        // LlmNode 会通过 messagesKey("llm_input_messages") 读取这个键的值
+                        return Map.of("llm_input_messages", prunedMessages);
+                    })
                     .postToolHook(state -> {
                         List<Message> messages = (List<Message>) state.value("messages").orElseThrow();
+                        //倒着遍历最后三条，if
                         ToolResponseMessage message = (ToolResponseMessage) messages.get(messages.size() - 1);
                         ToolResponseMessage.ToolResponse toolResponse = message.getResponses().get(0);
                         String responseData = toolResponse.responseData();

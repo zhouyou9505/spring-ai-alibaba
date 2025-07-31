@@ -1,15 +1,11 @@
 package com.alibaba.cloud.ai.service;
 
-import com.alibaba.cloud.ai.toolcalling.baidusearch.BaiduSearchService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.definition.ToolDefinition;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
