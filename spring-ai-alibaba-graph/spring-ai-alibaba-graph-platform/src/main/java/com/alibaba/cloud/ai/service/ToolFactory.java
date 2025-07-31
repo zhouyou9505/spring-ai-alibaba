@@ -1,11 +1,15 @@
 package com.alibaba.cloud.ai.service;
 
+import com.alibaba.cloud.ai.toolcalling.baidusearch.BaiduSearchService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.definition.ToolDefinition;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -15,14 +19,27 @@ import java.util.Map;
  */
 @Slf4j
 public class ToolFactory {
-    
+
+    private SearchTool searchTool;
+
+    public ToolFactory (SearchTool searchTool){
+        this.searchTool = searchTool;
+    }
+
     private static final Map<String, ToolCallback> registeredTools = new HashMap<>();
-    private static final ToolFactory instance = new ToolFactory();
     private static ChatClient defaultChatClient;
 
     public static void registerTool(String name, ToolCallback tool) {
         registeredTools.put(name, tool);
         log.info("注册工具: {}", name);
+    }
+
+    public static void registerTool(String name, Object toolBean) {
+        ToolCallback[] from = ToolCallbacks.from(toolBean);
+        for (ToolCallback toolCallback : from){
+            registeredTools.put("web_search", toolCallback);
+            log.info("注册工具: {}", name);
+        }
     }
 
     /**
@@ -48,33 +65,9 @@ public class ToolFactory {
         }
         return tool;
     }
-    
 
-    /**
-     * 获取实例
-     */
-    public static ToolFactory getInstance() {
-        return instance;
-    }
 
-    /**
-     * 注册默认工具
-     */
-    public static void registerDefaultTools(ChatModel chatModel) {
-        ChatClient chatClient = ChatClient.builder(chatModel).build();
-        setDefaultChatClient(chatClient);
-        
-        // 注册一些默认的模拟工具
-        registerTool("mock_tool", new MockToolCallback(chatClient, "mock_tool", "模拟工具"));
-        registerTool("web_search", new MockToolCallback(chatClient, "web_search", "网络搜索工具"));
-        registerTool("database_query", new MockToolCallback(chatClient, "database_query", "数据库查询工具"));
-        registerTool("content_generator", new MockToolCallback(chatClient, "content_generator", "内容生成工具"));
-        registerTool("translation_service", new MockToolCallback(chatClient, "translation_service", "翻译服务工具"));
-        registerTool("quality_checker", new MockToolCallback(chatClient, "quality_checker", "质量检查工具"));
-        registerTool("grammar_checker", new MockToolCallback(chatClient, "grammar_checker", "语法检查工具"));
-        registerTool("data_analysis", new MockToolCallback(chatClient, "data_analysis", "数据分析工具"));
-        registerTool("chart_generator", new MockToolCallback(chatClient, "chart_generator", "图表生成工具"));
-        registerTool("text_processor", new MockToolCallback(chatClient, "text_processor", "文本处理工具"));
-        registerTool("language_detector", new MockToolCallback(chatClient, "language_detector", "语言检测工具"));
-    }
+
+
+
 } 

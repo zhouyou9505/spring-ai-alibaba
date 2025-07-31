@@ -26,9 +26,11 @@ public class WorkflowService {
 
     private ChatModel chatModel;
 
-    public WorkflowService(ChatModel chatModel) {
+    private SearchTool searchTool;
+
+    public WorkflowService(ChatModel chatModel, SearchTool searchTool) {
         this.chatModel = chatModel;
-        this.flowRunner = new FlowRunner(chatModel);
+        this.flowRunner = new FlowRunner(chatModel,searchTool);
     }
 
     /**

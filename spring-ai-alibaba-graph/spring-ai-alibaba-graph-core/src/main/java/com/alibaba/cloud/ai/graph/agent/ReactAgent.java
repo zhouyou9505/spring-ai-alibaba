@@ -455,7 +455,8 @@ public class ReactAgent {
 		}
 
 		public ReactAgent build() throws GraphStateException {
-			LlmNode llmNode = LlmNode.builder().chatClient(chatClient).systemPromptTemplate(instruction).messagesKey("messages").build();
+			LlmNode llmNode = LlmNode.builder().chatClient(chatClient)
+					.toolCallbacks(tools).systemPromptTemplate(instruction).messagesKey("messages").build();
 			ToolNode toolNode = null;
 			if (resolver != null) {
 				toolNode = ToolNode.builder().toolCallbackResolver(resolver).build();

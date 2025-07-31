@@ -6,9 +6,11 @@ import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.state.strategy.AppendStrategy;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
+import com.alibaba.cloud.ai.service.SearchTool;
 import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.model.ChatModel;
 
 import java.util.HashMap;
@@ -37,9 +39,9 @@ public class FlowRunner {
     private final Map<String, CompiledGraph> compiledGraphs = new ConcurrentHashMap<>();
     private final Map<String, WorkflowSchema> workflowSchemas = new ConcurrentHashMap<>();
     private ChatModel chatModel;
-    public FlowRunner(ChatModel chatModel) {
+    public FlowRunner(ChatModel chatModel, SearchTool searchTool) {
         this.chatModel = chatModel;
-        this.nodeActionFactory = new NodeActionFactory(chatModel);
+        this.nodeActionFactory = new NodeActionFactory(chatModel,searchTool);
     }
 
     /**
@@ -286,7 +288,11 @@ public class FlowRunner {
                                         // 从状态中获取值
                                         Optional<Object> stateValue = state.value(conditionKey);
                                         if (stateValue.isPresent()) {
-                                            return stateValue.get().toString();
+                                            if (stateValue.get() instanceof Message){
+                                                return ((Message) stateValue.get()).getText();
+                                            }else {
+                                                return stateValue.get().toString();
+                                            }
                                         }
                                     }
                                 }
@@ -471,11 +477,5 @@ public class FlowRunner {
         
         return stats;
     }
-    
-    /**
-     * 获取工具工厂
-     */
-    public com.alibaba.cloud.ai.service.ToolFactory getToolFactory() {
-        return com.alibaba.cloud.ai.service.ToolFactory.getInstance();
-    }
+
 } 

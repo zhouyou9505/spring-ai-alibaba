@@ -1,5 +1,6 @@
 package com.alibaba.cloud.ai.controller;
 
+import com.alibaba.cloud.ai.service.SearchTool;
 import com.alibaba.cloud.ai.workflow.FlowRunner;
 import com.alibaba.cloud.ai.workflow.WorkflowSchema;
 import org.springframework.ai.chat.model.ChatModel;
@@ -22,11 +23,12 @@ public class WorkflowController {
 
     private final FlowRunner flowRunner;
 //    private final CodeGenerator codeGenerator;
+    private final SearchTool searchTool;
 
     @Autowired
-    public WorkflowController(ChatModel chatModel) {
-        this.flowRunner = new FlowRunner(chatModel);
-//        this.codeGenerator = new CodeGenerator();
+    public WorkflowController(ChatModel chatModel,SearchTool searchTool) {
+        this.flowRunner = new FlowRunner(chatModel,searchTool);
+        this.searchTool = searchTool;
     }
 
     private ChatModel chatModel;

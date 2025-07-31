@@ -9,9 +9,13 @@ import com.alibaba.cloud.ai.graph.agent.ReflectAgent;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.node.LlmNode;
 import com.alibaba.cloud.ai.service.MockToolCallback;
+import com.alibaba.cloud.ai.service.SearchTool;
 import com.alibaba.cloud.ai.service.ToolFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.tool.ToolCallback;
@@ -20,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static com.alibaba.cloud.ai.service.ToolFactory.registerTool;
 
 /**
  * NodeAction 工厂类，根据配置动态创建 NodeAction 实例
@@ -32,10 +38,12 @@ import java.util.stream.Collectors;
 public class NodeActionFactory {
 
 
-    public NodeActionFactory(ChatModel chatModel) {
+    public NodeActionFactory(ChatModel chatModel, SearchTool searchTool) {
+        ChatClient chatClient = ChatClient.builder(chatModel).build();
+        // 注册一些默认的模拟工具
+        registerTool("mock_tool", new MockToolCallback(chatClient, "mock_tool", "模拟工具"));
+        registerTool("web_search", searchTool);
 
-        // 注册默认工具
-        ToolFactory.registerDefaultTools(chatModel);
     }
 
     /**
@@ -152,19 +160,26 @@ public class NodeActionFactory {
                     .name(agentConfig.getName())
                     .chatClient(chatClient)
                     .tools(toolCallbacks)
+                    .postToolHook(state -> {
+                        List<Message> messages = (List<Message>) state.value("messages").orElseThrow();
+                        ToolResponseMessage message = (ToolResponseMessage) messages.get(messages.size() - 1);
+                        ToolResponseMessage.ToolResponse toolResponse = message.getResponses().get(0);
+                        String responseData = toolResponse.responseData();
+                        return Map.of(agentConfig.getOutputKey(), responseData);
+                    })
                     .maxIterations(maxIterations)
                     .instruction(instruction)
                     .build();
 
             // 编译并返回 NodeAction
             reactAgent.getAndCompileGraph();
-            
+
             // 获取inputKeys，如果为空则使用默认值
             List<String> inputKeys = agentConfig.getInputKeys();
             if (inputKeys == null || inputKeys.isEmpty()) {
                 inputKeys = List.of("input");
             }
-            
+
             return reactAgent.asNodeAction(
                     inputKeys,
                     agentConfig.getOutputKey() != null ? agentConfig.getOutputKey() : "output"
@@ -191,7 +206,7 @@ public class NodeActionFactory {
         }
         ChatClient chatClient = ChatClient.builder(chatModel)
                 .defaultOptions(OpenAiChatOptions.builder()
-                .internalToolExecutionEnabled(false).build())
+                        .internalToolExecutionEnabled(false).build())
                 .build();
 
         //转成toolcallback，过滤掉不存在的工具
@@ -220,16 +235,16 @@ public class NodeActionFactory {
 
             // 编译并返回 NodeAction
             reactAgentWithHuman.getAndCompileGraph();
-            
+
             // 获取inputKeys，如果为空则使用默认值
             List<String> inputKeys = agentConfig.getInputKeys();
             if (inputKeys == null || inputKeys.isEmpty()) {
                 inputKeys = List.of("input");
             }
-            
+
             // ReactAgentWithHuman目前只支持单个inputKey，取第一个
             String inputKey = inputKeys.get(0);
-            
+
             NodeActionWithConfig nodeActionWithConfig = reactAgentWithHuman.asNodeAction(
                     inputKey,
                     agentConfig.getOutputKey() != null ? agentConfig.getOutputKey() : "output"

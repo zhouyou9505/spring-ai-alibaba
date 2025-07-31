@@ -13,7 +13,11 @@ spring:
       chat:
         options:
           model: qwen-max
-
+    alibaba:
+      toolcalling:
+        baidu:
+          search:
+            enabled: true
 # 日志配置
 logging:
   level:

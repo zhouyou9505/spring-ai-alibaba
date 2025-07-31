@@ -63,30 +63,16 @@ public class CopilotController {
      */
     @SneakyThrows
     @PostMapping("/adjust")
-    public Map<String, Object> adjustWorkflow(@RequestBody Map<String, Object> request) {
+    public WorkflowSchema adjustWorkflow(@RequestBody Map<String, Object> request) {
         Map<String, Object> response = new HashMap<>();
 
         String userRequest = (String) request.get("userRequest");
         String workflowId = (String) request.get("workflowId");
 
-        if (userRequest == null || userRequest.trim().isEmpty()) {
-            response.put("success", false);
-            response.put("message", "用户请求不能为空");
-            return response;
-        }
-
         logger.info("收到Copilot请求: workflowId={}, request={}", workflowId, userRequest);
 
         // 获取当前工作流配置（如果存在）
         WorkflowSchema currentSchema = null;
-        if (workflowId != null && !workflowId.trim().isEmpty()) {
-            currentSchema = workflowService.getWorkflowSchema(workflowId);
-            if (currentSchema == null) {
-                response.put("success", false);
-                response.put("message", "工作流不存在: " + workflowId);
-                return response;
-            }
-        }
 
         // 调用LLM生成新的工作流配置
         WorkflowSchema newSchema = generateWorkflowSchema(userRequest, currentSchema);
@@ -110,19 +96,10 @@ public class CopilotController {
         } else {
             // 注册新工作流
             workflowService.registerWorkflow(newSchema);
-            logger.info("创建新工作流: {}", finalWorkflowId);
+            logger.info("创建新工作流: {}", JSON.toJSON(newSchema));
         }
 
-        response.put("success", true);
-        response.put("message", "工作流调整成功");
-        response.put("workflowId", finalWorkflowId);
-        response.put("workflowName", newSchema.getName());
-        response.put("agentCount", newSchema.getAgents() != null ? newSchema.getAgents().size() : 0);
-        response.put("edgeCount", newSchema.getEdges() != null ? newSchema.getEdges().size() : 0);
-        response.put("schema", newSchema);
-        response.put("optimizationAttempts", optimizationAttempts);
-
-        return response;
+        return newSchema;
     }
 
     /**
