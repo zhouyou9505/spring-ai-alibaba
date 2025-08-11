@@ -84,3 +84,6 @@ spring-ai-alibaba-jmanus/ui-vue3/pnpm-lock.yaml
 /spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/docker/middleware/kibana/*
 !/spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/docker/middleware/kibana/data/
 !/spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/docker/middleware/kibana/data/.gitkeep
+
+spring-ai-alibaba-studio/ui
+spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/frontend/package-lock.json
