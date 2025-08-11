@@ -78,12 +78,16 @@ spring-ai-alibaba-jmanus/ui-vue3/pnpm-lock.yaml
 #!/spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/docker/middleware/higress/data/.gitkeep
 
 /spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/docker/middleware/elasticsearch/*
-!/spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/docker/middleware/elasticsearch/data/
-!/spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/docker/middleware/elasticsearch/data/.gitkeep
+spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/docker/middleware/elasticsearch/data/
+spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/docker/middleware/elasticsearch/data/.gitkeep
+
+spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/docker/middleware/mysql/data
+spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/docker/kibana/mysql/data
+spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/docker/middleware/redis/data
 
 /spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/docker/middleware/kibana/*
-!/spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/docker/middleware/kibana/data/
-!/spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/docker/middleware/kibana/data/.gitkeep
+#!/spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/docker/middleware/kibana/data/
+#!/spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/docker/middleware/kibana/data/.gitkeep
 
 spring-ai-alibaba-studio/ui
 spring-ai-alibaba-studio/spring-ai-alibaba-studio-server/frontend/package-lock.json
