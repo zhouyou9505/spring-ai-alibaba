@@ -147,6 +147,7 @@ export default defineConfig({
       path: '/setting/apiKeys',
       component: 'Setting/APIKeys',
     },
+
   ],
   clickToComponent: {},
   tailwindcss: {},

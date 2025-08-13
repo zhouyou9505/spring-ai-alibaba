@@ -3,8 +3,6 @@ package com.alibaba.cloud.ai.studio.admin.service.impl;
 import com.agui.event.*;
 import com.agui.message.BaseMessage;
 import com.agui.types.RunAgentInput;
-import com.alibaba.cloud.ai.studio.admin.controller.AguiController.AguiChatRequest;
-import com.alibaba.cloud.ai.studio.admin.controller.AguiController.AguiDemoRequest;
 import com.alibaba.cloud.ai.studio.admin.service.AguiService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -78,107 +76,8 @@ public class AguiServiceImpl implements AguiService {
         });
     }
 
-    @Override
-    public void processChatRequest(AguiChatRequest request, SseEmitter emitter) {
-        // Validate the request
-        if (!validateRequest(request)) {
-            sendErrorEvent(emitter, request.getRunId(), "Invalid request parameters");
-            return;
-        }
 
-        // Process the request asynchronously
-        CompletableFuture.runAsync(() -> {
-            try {
-                // Emit STEP_STARTED event
-                StepStartedEvent stepStartedEvent = new StepStartedEvent();
-                stepStartedEvent.setRawEvent(Map.of(
-                    "runId", request.getRunId(),
-                    "stepId", "chat-processing",
-                    "stepType", "chat"
-                ));
-                stepStartedEvent.setTimestamp((int) (System.currentTimeMillis() / 1000));
-                sendEvent(emitter, stepStartedEvent);
 
-                // Simulate AI processing with streaming response
-                processStreamingResponse(request, emitter);
-                
-                // Emit STEP_FINISHED event
-                StepFinishedEvent stepFinishedEvent = new StepFinishedEvent();
-                stepFinishedEvent.setRawEvent(Map.of(
-                    "runId", request.getRunId(),
-                    "stepId", "chat-processing",
-                    "stepType", "chat"
-                ));
-                stepFinishedEvent.setTimestamp((int) (System.currentTimeMillis() / 1000));
-                sendEvent(emitter, stepFinishedEvent);
-
-                // Send RUN_FINISHED event
-                RunFinishedEvent runFinishedEvent = new RunFinishedEvent();
-                runFinishedEvent.setRawEvent(Map.of("runId", request.getRunId()));
-                runFinishedEvent.setTimestamp((int) (System.currentTimeMillis() / 1000));
-                sendEvent(emitter, runFinishedEvent);
-                
-                emitter.complete();
-                
-            } catch (Exception e) {
-                sendErrorEvent(emitter, request.getRunId(), e.getMessage());
-                emitter.completeWithError(e);
-            }
-        });
-    }
-
-    @Override
-    public void processDemoRequest(AguiDemoRequest request, SseEmitter emitter) {
-        CompletableFuture.runAsync(() -> {
-            try {
-                String demoType = request.getDemoType() != null ? request.getDemoType() : "full";
-                
-                switch (demoType) {
-                    case "lifecycle":
-                        demonstrateLifecycleEvents(emitter, request.getRunId());
-                        break;
-                    case "text":
-                        demonstrateTextMessageEvents(emitter, request.getRunId());
-                        break;
-                    case "tool":
-                        demonstrateToolCallEvents(emitter, request.getRunId());
-                        break;
-                    case "state":
-                        demonstrateStateManagementEvents(emitter, request.getRunId());
-                        break;
-                    case "thinking":
-                        demonstrateThinkingEvents(emitter, request.getRunId());
-                        break;
-                    case "custom":
-                        demonstrateCustomEvents(emitter, request.getRunId());
-                        break;
-                    default:
-                        demonstrateAllEventTypes(emitter, request.getRunId());
-                        break;
-                }
-                
-                emitter.complete();
-                
-            } catch (Exception e) {
-                sendErrorEvent(emitter, request.getRunId(), e.getMessage());
-                emitter.completeWithError(e);
-            }
-        });
-    }
-
-    @Override
-    public String generateRunId() {
-        return UUID.randomUUID().toString();
-    }
-
-    @Override
-    public boolean validateRequest(AguiChatRequest request) {
-        return request != null 
-            && request.getRunId() != null 
-            && !request.getRunId().trim().isEmpty()
-            && request.getContent() != null 
-            && !request.getContent().trim().isEmpty();
-    }
 
     /**
      * Process agent streaming response for AG-UI
@@ -214,35 +113,6 @@ public class AguiServiceImpl implements AguiService {
         }
     }
 
-    /**
-     * Process streaming response for AG-UI chat
-     */
-    private void processStreamingResponse(AguiChatRequest request, SseEmitter emitter) {
-        try {
-            // Emit TEXT_MESSAGE_START event
-            TextMessageStartEvent textMessageStartEvent = new TextMessageStartEvent();
-            textMessageStartEvent.setMessageId(UUID.randomUUID().toString());
-            textMessageStartEvent.setRawEvent(Map.of("runId", request.getRunId()));
-            textMessageStartEvent.setTimestamp((int) (System.currentTimeMillis() / 1000));
-            sendEvent(emitter, textMessageStartEvent);
-
-            // Simulate AI response generation
-            String response = generateSampleResponse(request.getContent());
-            
-            // Stream the response in chunks
-            streamTextChunks(emitter, request.getRunId(), response);
-            
-            // Emit TEXT_MESSAGE_END event
-            TextMessageEndEvent textMessageEndEvent = new TextMessageEndEvent();
-            textMessageEndEvent.setMessageId(UUID.randomUUID().toString());
-            textMessageEndEvent.setRawEvent(Map.of("runId", request.getRunId()));
-            textMessageEndEvent.setTimestamp((int) (System.currentTimeMillis() / 1000));
-            sendEvent(emitter, textMessageEndEvent);
-            
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to process streaming response", e);
-        }
-    }
 
     /**
      * Demonstrate all AG-UI event types
