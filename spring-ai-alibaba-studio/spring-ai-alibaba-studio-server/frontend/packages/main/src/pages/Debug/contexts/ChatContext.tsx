@@ -269,10 +269,18 @@ const simulateAPICall = async (
             
           case "TOOL_CALL_START":
             // Add tool call
-            toolCalls.push({
+            const newToolCall = {
               name: data.toolCallName || 'unknown_tool',
               arguments: {},
-              result: null
+              result: null,
+              status: 'running' // 添加状态字段
+            };
+            toolCalls.push(newToolCall);
+            console.log('TOOL_CALL_START: Added tool call:', newToolCall);
+            
+            // 只更新工具调用数组，不修改content
+            safeUpdateAssistantMessage({ 
+              toolCalls: [...toolCalls]
             });
             break;
             
@@ -280,7 +288,13 @@ const simulateAPICall = async (
             // Update tool call arguments
             if (toolCalls.length > 0) {
               const lastTool = toolCalls[toolCalls.length - 1];
-              lastTool.arguments = { ...lastTool.arguments, ...data.delta };
+              lastTool.arguments = data.arguments || {};
+              console.log('TOOL_CALL_ARGS: Updated arguments for tool:', lastTool.name, 'args:', lastTool.arguments);
+              
+              // 只更新工具调用数组，不修改content
+              safeUpdateAssistantMessage({ 
+                toolCalls: [...toolCalls]
+              });
             }
             break;
             
@@ -289,12 +303,21 @@ const simulateAPICall = async (
             if (toolCalls.length > 0) {
               const lastTool = toolCalls[toolCalls.length - 1];
               lastTool.result = data.content;
+              lastTool.status = 'completed'; // 标记为完成
+              console.log('TOOL_CALL_RESULT: Updated result for tool:', lastTool.name, 'result:', lastTool.result);
+              
+              // 只更新工具调用数组，不修改content
+              safeUpdateAssistantMessage({ 
+                toolCalls: [...toolCalls]
+              });
             }
             break;
             
           case "RUN_FINISHED":
             // Finalize message with tool calls
             console.log('Finalizing assistant message with tool calls:', toolCalls);
+            
+            // 只保留AI回复内容，工具调用状态在MessageList中显示
             safeUpdateAssistantMessage({ 
               content: fullResponse || '处理完成',
               toolCalls: toolCalls.length > 0 ? toolCalls : undefined
@@ -309,9 +332,18 @@ const simulateAPICall = async (
 
     es.onerror = (error) => {
       console.error('AG-UI EventSource error:', error);
+      
+      // 标记所有运行中的工具调用为失败
+      toolCalls.forEach(tool => {
+        if (tool.status === 'running') {
+          tool.status = 'failed';
+        }
+      });
+      
       safeUpdateAssistantMessage({ 
         content: '抱歉，处理过程中出现错误，请稍后重试。',
-        error: '连接错误'
+        error: '连接错误',
+        toolCalls: toolCalls.length > 0 ? toolCalls : undefined
       });
       es.close();
     };
@@ -320,10 +352,19 @@ const simulateAPICall = async (
     setTimeout(() => {
       if (es.readyState !== EventSource.CLOSED) {
         es.close();
+        
+        // 标记所有运行中的工具调用为失败
+        toolCalls.forEach(tool => {
+          if (tool.status === 'running') {
+            tool.status = 'failed';
+          }
+        });
+        
         if (fullResponse === '') {
           safeUpdateAssistantMessage({ 
             content: '处理超时，请稍后重试。',
-            error: '超时错误'
+            error: '超时错误',
+            toolCalls: toolCalls.length > 0 ? toolCalls : undefined
           });
         }
       }
