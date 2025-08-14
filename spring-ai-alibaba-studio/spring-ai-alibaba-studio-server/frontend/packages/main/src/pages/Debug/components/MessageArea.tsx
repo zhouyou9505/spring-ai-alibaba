@@ -29,7 +29,7 @@ const MessageArea: React.FC = () => {
   const { currentSession } = useChatContext();
   const { config, toggleDebugInfo } = useConfigContext();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   // AG-UI 事件状态
   const [aguiEvents, setAguiEvents] = useState<AguiEvent[]>([]);
   const [rawMode, setRawMode] = useState(false);
@@ -58,32 +58,33 @@ const MessageArea: React.FC = () => {
     }
   };
 
-  // AG-UI 事件处理函数
+  // AG-UI 事件处理函数 - 仅用于调试显示，不影响聊天
   const startAguiStream = () => {
     setAguiEvents([]);
     setIsStreaming(true);
-    
+
     if (esRef.current) {
       esRef.current.close();
     }
 
-    const url = `http://localhost:8080/api/agui/stream?question=${encodeURIComponent(customQuestion)}&filter=${filter}&limit=${limit}`;
-    console.log('Starting AG-UI stream with URL:', url);
-    
+    // 使用独立的AG-UI调试流，不影响聊天消息
+    const url = `http://localhost:8080/api/agui/stream?question=${encodeURIComponent(customQuestion)}&filter=${filter}&limit=${limit}&mode=debug`;
+    console.log('Starting AG-UI debug stream with URL:', url);
+
     const es = new EventSource(url);
     esRef.current = es;
     setConnected(true);
 
-         // Listen to SSE events directly (AG-UI standard)
-     es.onmessage = (ev: MessageEvent) => {
-       try {
-         console.log('Received AG-UI event:', ev.data);
-         const data = JSON.parse(ev.data) as AguiEvent;
-         setAguiEvents(prev => [...prev, data]);
-       } catch (error) {
-         console.error('Failed to parse event data:', error);
-       }
-     };
+    // Listen to SSE events directly (AG-UI standard) - 仅用于调试显示
+    es.onmessage = (ev: MessageEvent) => {
+      try {
+        console.log('Received AG-UI debug event:', ev.data);
+        const data = JSON.parse(ev.data) as AguiEvent;
+        setAguiEvents(prev => [...prev, data]);
+      } catch (error) {
+        console.error('Failed to parse AG-UI debug event data:', error);
+      }
+    };
 
     es.onopen = () => {
       console.log('EventSource connection opened');
@@ -126,13 +127,13 @@ const MessageArea: React.FC = () => {
   const testBackendConnection = async () => {
     try {
       setError(null);
-      const response = await fetch('http://localhost:8080/api/agui/stream?question=test&filter=ALL&limit=1', {
+      const response = await fetch('http://localhost:8080/api/agui/stream?question=test&filter=ALL&limit=1&mode=debug', {
         method: 'GET',
         headers: {
           'Accept': 'text/event-stream',
         },
       });
-      
+
       if (response.ok) {
         console.log('Backend connection test successful');
         setError(null);
@@ -192,112 +193,6 @@ const MessageArea: React.FC = () => {
         </div>
       </div>
 
-      {/* AG-UI 控制面板 */}
-      <div style={{ 
-        padding: '16px', 
-        backgroundColor: '#f8f9fa', 
-        borderBottom: '1px solid #e9ecef',
-        marginBottom: '16px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
-          <span style={{ fontWeight: 'bold', color: '#495057' }}>AG-UI 事件流:</span>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12px', color: '#6c757d' }}>问题:</span>
-            <Input 
-              value={customQuestion}
-              onChange={(e) => setCustomQuestion(e.target.value)}
-              placeholder="输入问题..."
-              style={{ width: 200 }}
-              disabled={isStreaming}
-              size="small"
-            />
-          </div>
-          
-          <Button
-            type="primary"
-            icon={isStreaming ? <ReloadOutlined /> : <PlayCircleOutlined />}
-            onClick={isStreaming ? stopAguiStream : startAguiStream}
-            loading={isStreaming}
-            size="small"
-          >
-            {isStreaming ? '停止' : '开始'}
-          </Button>
-          <Button
-            icon={<ClearOutlined />}
-            onClick={clearAguiEvents}
-            disabled={isStreaming}
-            size="small"
-          >
-            清空
-          </Button>
-          
-          <Button
-            onClick={testBackendConnection}
-            disabled={isStreaming}
-            size="small"
-            title="测试后端连接"
-          >
-            测试连接
-          </Button>
-        </div>
-        
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12px', color: '#6c757d' }}>过滤:</span>
-            <Select 
-              value={filter} 
-              onChange={setFilter}
-              style={{ width: 100 }}
-              disabled={isStreaming}
-              size="small"
-            >
-              <Option value="ALL">全部</Option>
-              <Option value="LIFECYCLE">生命周期</Option>
-              <Option value="MESSAGE">消息</Option>
-              <Option value="TOOL">工具</Option>
-              <Option value="STATE">状态</Option>
-            </Select>
-          </div>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12px', color: '#6c757d' }}>限制:</span>
-            <Input 
-              type="number" 
-              value={limit} 
-              onChange={(e) => setLimit(Number(e.target.value))}
-              style={{ width: 60 }}
-              disabled={isStreaming}
-              size="small"
-            />
-          </div>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12px', color: '#6c757d' }}>原始模式:</span>
-            <Switch 
-              checked={rawMode} 
-              onChange={setRawMode}
-              disabled={isStreaming}
-              size="small"
-            />
-          </div>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12px', color: '#6c757d' }}>状态:</span>
-            <Tag color={connected ? 'success' : 'error'}>
-              {connected ? '🟢 已连接' : '🔴 未连接'}
-            </Tag>
-          </div>
-          
-          {error && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '12px', color: '#dc3545' }}>错误:</span>
-              <span style={{ fontSize: '11px', color: '#dc3545' }}>{error}</span>
-            </div>
-          )}
-        </div>
-      </div>
-
       <div className={styles.messageContainer}>
         {currentSession ? (
           <>
@@ -316,152 +211,6 @@ const MessageArea: React.FC = () => {
             <div style={{ fontSize: 16, marginBottom: 8 }}>🤖</div>
             <div>欢迎使用 Agent Chat UI</div>
             <div style={{ fontSize: 12, marginTop: 4 }}>请创建或选择一个对话开始聊天</div>
-          </div>
-        )}
-
-        {/* AG-UI 事件显示区域 */}
-        {aguiEvents.length > 0 && (
-          <div style={{ 
-            marginTop: '20px', 
-            padding: '16px', 
-            backgroundColor: '#f8f9fa', 
-            borderRadius: '8px',
-            border: '1px solid #e9ecef'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
-              marginBottom: '12px' 
-            }}>
-              <h4 style={{ margin: 0, color: '#495057' }}>AG-UI 事件流</h4>
-              <span style={{ fontSize: '12px', color: '#6c757d' }}>
-                总计: {aguiEvents.length} | 过滤后: {visibleEvents.length}
-              </span>
-            </div>
-            
-            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-              {visibleEvents.map((event, index) => {
-                const timestamp = event.timestamp ? new Date(event.timestamp).toLocaleTimeString() : 'N/A';
-                
-                if (rawMode) {
-                  return (
-                    <pre key={index} style={{ 
-                      backgroundColor: '#fff', 
-                      padding: '8px', 
-                      borderRadius: '4px', 
-                      border: '1px solid #dee2e6',
-                      fontSize: '11px',
-                      marginBottom: '8px',
-                      overflowX: 'auto'
-                    }}>
-                      {JSON.stringify(event, null, 2)}
-                    </pre>
-                  );
-                }
-
-                // 渲染事件内容
-                let eventContent = '';
-                let eventColor = '#6c757d';
-                
-                switch (event.type) {
-                  case "RUN_STARTED":
-                    eventContent = `🟢 运行开始`;
-                    eventColor = '#28a745';
-                    break;
-                  case "STEP_STARTED":
-                    eventContent = `➡️ 步骤开始: ${event.stepName || 'unknown'}`;
-                    eventColor = '#007bff';
-                    break;
-                  case "TEXT_MESSAGE_START":
-                    eventContent = `💬 消息开始 (${event.role || 'unknown'})`;
-                    eventColor = '#17a2b8';
-                    break;
-                                     case "TEXT_MESSAGE_CHUNK":
-                     eventContent = `📝 内容块: ${event.delta || ''}`;
-                     eventColor = '#6f42c1';
-                     break;
-                  case "TEXT_MESSAGE_END":
-                    eventContent = `✅ 消息结束`;
-                    eventColor = '#6c757d';
-                    break;
-                  case "TOOL_CALL_START":
-                    eventContent = `🛠️ 工具调用: ${event.toolCallName || 'unknown'}`;
-                    eventColor = '#fd7e14';
-                    break;
-                  case "TOOL_CALL_ARGS":
-                    eventContent = `🔧 参数: ${event.delta || ''}`;
-                    eventColor = '#fd7e14';
-                    break;
-                  case "TOOL_CALL_END":
-                    eventContent = `✅ 工具调用结束`;
-                    eventColor = '#6c757d';
-                    break;
-                  case "TOOL_CALL_RESULT":
-                    eventContent = `📦 结果: ${String(event.content || '')}`;
-                    eventColor = '#fd7e14';
-                    break;
-                  case "STATE_SNAPSHOT":
-                    eventContent = `📊 状态快照`;
-                    eventColor = '#6f42c1';
-                    break;
-                  case "STATE_DELTA":
-                    eventContent = `📈 状态更新`;
-                    eventColor = '#6f42c1';
-                    break;
-                  case "MESSAGES_SNAPSHOT":
-                    eventContent = `💬 消息快照`;
-                    eventColor = '#6f42c1';
-                    break;
-                  case "STEP_FINISHED":
-                    eventContent = `✅ 步骤完成: ${event.stepName || 'unknown'}`;
-                    eventColor = '#007bff';
-                    break;
-                  case "RUN_FINISHED":
-                    eventContent = `🎉 运行完成`;
-                    eventColor = '#28a745';
-                    break;
-                  default:
-                    eventContent = `• ${event.type}`;
-                    eventColor = '#6c757d';
-                }
-
-                return (
-                  <div key={index} style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '8px', 
-                    padding: '8px',
-                    backgroundColor: '#fff',
-                    borderRadius: '4px',
-                    border: '1px solid #dee2e6',
-                    marginBottom: '8px'
-                  }}>
-                    <div style={{ 
-                      width: '8px', 
-                      height: '8px', 
-                      borderRadius: '50%', 
-                      backgroundColor: eventColor 
-                    }} />
-                    <span style={{ 
-                      fontSize: '12px', 
-                      color: eventColor, 
-                      fontWeight: '500',
-                      minWidth: '200px'
-                    }}>
-                      {eventContent}
-                    </span>
-                    <span style={{ 
-                      fontSize: '10px', 
-                      color: '#6c757d',
-                      marginLeft: 'auto'
-                    }}>
-                      {timestamp}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
           </div>
         )}
       </div>

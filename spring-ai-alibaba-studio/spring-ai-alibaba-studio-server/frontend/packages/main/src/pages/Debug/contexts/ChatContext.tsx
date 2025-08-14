@@ -150,13 +150,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     const userMessage: Message = {
-      id: `msg_${Date.now()}`,
+      id: `user_msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type: 'user',
       content,
       timestamp: new Date(),
       attachments,
     };
 
+    console.log('Adding user message:', userMessage.id, 'with content:', userMessage.content);
     dispatch({
       type: 'ADD_MESSAGE',
       payload: { sessionId: currentSession.id, message: userMessage }
@@ -198,21 +199,43 @@ const simulateAPICall = async (
 ) => {
   // Create initial assistant message
   const assistantMessage: Message = {
-    id: `msg_${Date.now()}`,
+    id: `assistant_msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     type: 'assistant',
     content: '正在处理您的问题...',
     timestamp: new Date(),
   };
 
+  console.log('Creating assistant message with ID:', assistantMessage.id);
+  console.log('User question:', content);
+
+  console.log('Adding assistant message:', assistantMessage.id, 'with content:', assistantMessage.content);
   dispatch({
     type: 'ADD_MESSAGE',
     payload: { sessionId, message: assistantMessage }
   });
 
+  // Helper function to safely update assistant message
+  const safeUpdateAssistantMessage = (updates: Partial<Message>) => {
+    if (assistantMessage && assistantMessage.type === 'assistant') {
+      console.log('Safely updating assistant message:', assistantMessage.id, 'with updates:', updates);
+      dispatch({
+        type: 'UPDATE_MESSAGE',
+        payload: { 
+          sessionId, 
+          messageId: assistantMessage.id, 
+          updates
+        }
+      });
+    } else {
+      console.error('Cannot update assistant message - invalid message:', assistantMessage);
+    }
+  };
+
   try {
-    // Connect to AG-UI backend (running on port 8080)
-    const url = `http://localhost:8080/api/agui/stream?question=${encodeURIComponent(content)}&filter=ALL&limit=120`;
-    console.log('Connecting to AG-UI backend:', url);
+    // Connect to AG-UI backend for chat messages (running on port 8080)
+    // Use different parameters to avoid conflict with debug stream
+    const url = `http://localhost:8080/api/agui/stream?question=${encodeURIComponent(content)}&filter=ALL&limit=120&mode=chat`;
+    console.log('Connecting to AG-UI backend for chat:', url);
     
     const es = new EventSource(url);
     let fullResponse = '';
@@ -222,26 +245,26 @@ const simulateAPICall = async (
     es.onmessage = (ev: MessageEvent) => {
       try {
         const data = JSON.parse(ev.data);
-        console.log('Received AG-UI event:', data);
+        console.log('Received AG-UI event for chat:', data);
+        
+        // Process all events for this chat session
+        // Note: Backend returns a fixed messageId, so we process all events
         
         switch (data.type) {
           case "TEXT_MESSAGE_START":
             // Reset response for new message
             fullResponse = '';
+            console.log('TEXT_MESSAGE_START: Resetting response for assistant message:', assistantMessage.id);
             break;
             
           case "TEXT_MESSAGE_CHUNK":
-            // Accumulate content
-            fullResponse += data.delta || '';
-            // Update message with accumulated content
-            dispatch({
-              type: 'UPDATE_MESSAGE',
-              payload: { 
-                sessionId, 
-                messageId: assistantMessage.id, 
-                updates: { content: fullResponse }
-              }
-            });
+            // Accumulate content from AI response (not user input)
+            const chunk = data.delta || '';
+            fullResponse += chunk;
+            console.log('TEXT_MESSAGE_CHUNK: Received chunk:', chunk, 'Full response so far:', fullResponse);
+            
+            // Safely update assistant message with accumulated content
+            safeUpdateAssistantMessage({ content: fullResponse });
             break;
             
           case "TOOL_CALL_START":
@@ -271,16 +294,10 @@ const simulateAPICall = async (
             
           case "RUN_FINISHED":
             // Finalize message with tool calls
-            dispatch({
-              type: 'UPDATE_MESSAGE',
-              payload: { 
-                sessionId, 
-                messageId: assistantMessage.id, 
-                updates: { 
-                  content: fullResponse || '处理完成',
-                  toolCalls: toolCalls.length > 0 ? toolCalls : undefined
-                }
-              }
+            console.log('Finalizing assistant message with tool calls:', toolCalls);
+            safeUpdateAssistantMessage({ 
+              content: fullResponse || '处理完成',
+              toolCalls: toolCalls.length > 0 ? toolCalls : undefined
             });
             es.close();
             break;
@@ -292,16 +309,9 @@ const simulateAPICall = async (
 
     es.onerror = (error) => {
       console.error('AG-UI EventSource error:', error);
-      dispatch({
-        type: 'UPDATE_MESSAGE',
-        payload: { 
-          sessionId, 
-          messageId: assistantMessage.id, 
-          updates: { 
-            content: '抱歉，处理过程中出现错误，请稍后重试。',
-            error: '连接错误'
-          }
-        }
+      safeUpdateAssistantMessage({ 
+        content: '抱歉，处理过程中出现错误，请稍后重试。',
+        error: '连接错误'
       });
       es.close();
     };
@@ -311,16 +321,9 @@ const simulateAPICall = async (
       if (es.readyState !== EventSource.CLOSED) {
         es.close();
         if (fullResponse === '') {
-          dispatch({
-            type: 'UPDATE_MESSAGE',
-            payload: { 
-              sessionId, 
-              messageId: assistantMessage.id, 
-              updates: { 
-                content: '处理超时，请稍后重试。',
-                error: '超时错误'
-              }
-            }
+          safeUpdateAssistantMessage({ 
+            content: '处理超时，请稍后重试。',
+            error: '超时错误'
           });
         }
       }
@@ -328,16 +331,9 @@ const simulateAPICall = async (
 
   } catch (error) {
     console.error('AG-UI API call failed:', error);
-    dispatch({
-      type: 'UPDATE_MESSAGE',
-      payload: { 
-        sessionId, 
-        messageId: assistantMessage.id, 
-        updates: { 
-          content: '抱歉，无法连接到后端服务，请检查服务状态。',
-          error: '连接失败'
-        }
-      }
+    safeUpdateAssistantMessage({ 
+      content: '抱歉，无法连接到后端服务，请检查服务状态。',
+      error: '连接失败'
     });
   }
 };
