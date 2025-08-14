@@ -165,7 +165,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     dispatch({ type: 'SET_STREAMING', payload: true });
 
     try {
-      // TODO: Replace with actual API call
+      // Call real AG-UI backend API
       await simulateAPICall(content, currentSession.id, dispatch);
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: '发送消息失败' });
@@ -190,31 +190,156 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 };
 
-// Simulate API call for demonstration
+// Real API call to AG-UI backend
 const simulateAPICall = async (
   content: string,
   sessionId: string,
   dispatch: React.Dispatch<ChatAction>
 ) => {
-  // Simulate processing delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
+  // Create initial assistant message
   const assistantMessage: Message = {
     id: `msg_${Date.now()}`,
     type: 'assistant',
-    content: `我收到了你的消息："${content}"。这是一个模拟回复，用于演示聊天界面功能。`,
+    content: '正在处理您的问题...',
     timestamp: new Date(),
-    toolCalls: content.includes('工具') ? [{
-      name: 'example_tool',
-      arguments: { query: content },
-      result: '工具调用示例结果'
-    }] : undefined,
   };
 
   dispatch({
     type: 'ADD_MESSAGE',
     payload: { sessionId, message: assistantMessage }
   });
+
+  try {
+    // Connect to AG-UI backend (running on port 8080)
+    const url = `http://localhost:8080/api/agui/stream?question=${encodeURIComponent(content)}&filter=ALL&limit=120`;
+    console.log('Connecting to AG-UI backend:', url);
+    
+    const es = new EventSource(url);
+    let fullResponse = '';
+    let toolCalls: any[] = [];
+    
+    // Listen to SSE events directly (AG-UI standard)
+    es.onmessage = (ev: MessageEvent) => {
+      try {
+        const data = JSON.parse(ev.data);
+        console.log('Received AG-UI event:', data);
+        
+        switch (data.type) {
+          case "TEXT_MESSAGE_START":
+            // Reset response for new message
+            fullResponse = '';
+            break;
+            
+          case "TEXT_MESSAGE_CHUNK":
+            // Accumulate content
+            fullResponse += data.delta || '';
+            // Update message with accumulated content
+            dispatch({
+              type: 'UPDATE_MESSAGE',
+              payload: { 
+                sessionId, 
+                messageId: assistantMessage.id, 
+                updates: { content: fullResponse }
+              }
+            });
+            break;
+            
+          case "TOOL_CALL_START":
+            // Add tool call
+            toolCalls.push({
+              name: data.toolCallName || 'unknown_tool',
+              arguments: {},
+              result: null
+            });
+            break;
+            
+          case "TOOL_CALL_ARGS":
+            // Update tool call arguments
+            if (toolCalls.length > 0) {
+              const lastTool = toolCalls[toolCalls.length - 1];
+              lastTool.arguments = { ...lastTool.arguments, ...data.delta };
+            }
+            break;
+            
+          case "TOOL_CALL_RESULT":
+            // Update tool call result
+            if (toolCalls.length > 0) {
+              const lastTool = toolCalls[toolCalls.length - 1];
+              lastTool.result = data.content;
+            }
+            break;
+            
+          case "RUN_FINISHED":
+            // Finalize message with tool calls
+            dispatch({
+              type: 'UPDATE_MESSAGE',
+              payload: { 
+                sessionId, 
+                messageId: assistantMessage.id, 
+                updates: { 
+                  content: fullResponse || '处理完成',
+                  toolCalls: toolCalls.length > 0 ? toolCalls : undefined
+                }
+              }
+            });
+            es.close();
+            break;
+        }
+      } catch (error) {
+        console.error('Failed to parse AG-UI event:', error);
+      }
+    };
+
+    es.onerror = (error) => {
+      console.error('AG-UI EventSource error:', error);
+      dispatch({
+        type: 'UPDATE_MESSAGE',
+        payload: { 
+          sessionId, 
+          messageId: assistantMessage.id, 
+          updates: { 
+            content: '抱歉，处理过程中出现错误，请稍后重试。',
+            error: '连接错误'
+          }
+        }
+      });
+      es.close();
+    };
+
+    // Set timeout to prevent hanging
+    setTimeout(() => {
+      if (es.readyState !== EventSource.CLOSED) {
+        es.close();
+        if (fullResponse === '') {
+          dispatch({
+            type: 'UPDATE_MESSAGE',
+            payload: { 
+              sessionId, 
+              messageId: assistantMessage.id, 
+              updates: { 
+                content: '处理超时，请稍后重试。',
+                error: '超时错误'
+              }
+            }
+          });
+        }
+      }
+    }, 30000); // 30 seconds timeout
+
+  } catch (error) {
+    console.error('AG-UI API call failed:', error);
+    dispatch({
+      type: 'UPDATE_MESSAGE',
+      payload: { 
+        sessionId, 
+        messageId: assistantMessage.id, 
+        updates: { 
+          content: '抱歉，无法连接到后端服务，请检查服务状态。',
+          error: '连接失败'
+        }
+      }
+    });
+  }
 };
 
 export const useChatContext = () => {
