@@ -60,59 +60,121 @@ const MessageArea: React.FC = () => {
 
   // AG-UI 事件处理函数 - 仅用于调试显示，不影响聊天
   const startAguiStream = () => {
+    if (isStreaming) return;
+    
+    setConnected(false);
+    setError(null);
     setAguiEvents([]);
     setIsStreaming(true);
-
-    if (esRef.current) {
-      esRef.current.close();
-    }
-
-    // 使用独立的AG-UI调试流，不影响聊天消息
-    const url = `http://localhost:8080/api/agui/stream?question=${encodeURIComponent(customQuestion)}&filter=${filter}&limit=${limit}&mode=debug`;
-    console.log('Starting AG-UI debug stream with URL:', url);
-
-    const es = new EventSource(url);
-    esRef.current = es;
-    setConnected(true);
-
-    // Listen to SSE events directly (AG-UI standard) - 仅用于调试显示
-    es.onmessage = (ev: MessageEvent) => {
+    
+    // Create RunAgentInput structure for debug stream
+    const runAgentInput = {
+      threadId: `debug_thread_${Date.now()}`,
+      runId: `debug_run_${Date.now()}`,
+      state: null,
+      messages: [
+        {
+          id: `debug_msg_${Date.now()}`,
+          role: "user",
+          content: customQuestion || "测试问题",
+          name: null
+        }
+      ],
+      tools: [
+        {
+          name: "debug_tool",
+          description: "Debug tool for testing",
+          parameters: {
+            type: "object",
+            properties: {
+              query: { type: "string" },
+              filter: { type: "string" },
+              limit: { type: "number" }
+            }
+          }
+        }
+      ],
+      context: [
+        {
+          description: "debug_session",
+          value: "debug"
+        }
+      ],
+      forwardedProps: null
+    };
+    
+    console.log('Starting AG-UI debug stream with RunAgentInput:', runAgentInput);
+    
+    // Use fetch with ReadableStream for POST request (AG-UI standard)
+    const startStream = async () => {
       try {
-        console.log('Received AG-UI debug event:', ev.data);
-        const data = JSON.parse(ev.data) as AguiEvent;
-        setAguiEvents(prev => [...prev, data]);
+        const response = await fetch('http://localhost:8080/api/agui/stream', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
+          },
+          body: JSON.stringify(runAgentInput)
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        if (!response.body) {
+          throw new Error('Response body is null');
+        }
+        
+        setConnected(true);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) {
+              console.log('Debug stream completed');
+              break;
+            }
+            
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+            
+                         for (const line of lines) {
+               if (line.startsWith('data: ')) {
+                 try {
+                   const data = JSON.parse(line.slice(6)) as AguiEvent;
+                   console.log('Received AG-UI debug event:', data);
+                   
+                   // AG-UI Event classes have direct fields
+                   setAguiEvents(prev => [...prev, data]);
+                 } catch (error) {
+                   console.error('Failed to parse AG-UI debug event data:', error);
+                 }
+               }
+             }
+          }
+        } finally {
+          reader.releaseLock();
+          setConnected(false);
+          setIsStreaming(false);
+        }
+        
       } catch (error) {
-        console.error('Failed to parse AG-UI debug event data:', error);
+        console.error('AG-UI debug stream error:', error);
+        setError('连接错误');
+        setConnected(false);
+        setIsStreaming(false);
       }
     };
-
-    es.onopen = () => {
-      console.log('EventSource connection opened');
-      setConnected(true);
-    };
-
-    es.onerror = (error) => {
-      console.error('EventSource error:', error);
-      setError('连接错误，请检查后端服务是否运行');
-      setConnected(false);
-      setIsStreaming(false);
-      es.close();
-    };
-
-    es.addEventListener('error', (error) => {
-      console.error('EventSource error event:', error);
-      setError('连接错误，请检查后端服务是否运行');
-      setConnected(false);
-      setIsStreaming(false);
-      es.close();
-    });
+    
+    startStream();
   };
 
   const stopAguiStream = () => {
-    if (esRef.current) {
-      esRef.current.close();
-      esRef.current = null;
-    }
+    // For POST request with ReadableStream, we can't easily stop the stream
+    // The stream will complete naturally when the backend finishes
     setConnected(false);
     setIsStreaming(false);
   };
@@ -127,23 +189,45 @@ const MessageArea: React.FC = () => {
   const testBackendConnection = async () => {
     try {
       setError(null);
-      const response = await fetch('http://localhost:8080/api/agui/stream?question=test&filter=ALL&limit=1&mode=debug', {
-        method: 'GET',
+      
+      // Test with POST request and RunAgentInput structure (AG-UI standard)
+      const testInput = {
+        threadId: "test_thread",
+        runId: "test_run",
+        state: null,
+        messages: [
+          {
+            id: "test_msg",
+            role: "user",
+            content: "test",
+            name: null
+          }
+        ],
+        tools: [],
+        context: [],
+        forwardedProps: null
+      };
+      
+      const response = await fetch('http://localhost:8080/api/agui/stream', {
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Accept': 'text/event-stream',
         },
+        body: JSON.stringify(testInput)
       });
-
+      
       if (response.ok) {
         console.log('Backend connection test successful');
-        setError(null);
+        setError('✅ 后端连接正常');
+        setTimeout(() => setError(null), 2000);
       } else {
         console.error('Backend connection test failed:', response.status);
-        setError(`后端连接测试失败: ${response.status} ${response.statusText}`);
+        setError(`❌ 后端连接测试失败: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
       console.error('Backend connection test error:', error);
-      setError('后端连接测试失败: 网络错误');
+      setError('❌ 后端连接测试失败: 网络错误');
     }
   };
 
@@ -159,14 +243,7 @@ const MessageArea: React.FC = () => {
     });
   }, [aguiEvents, filter]);
 
-  // 清理 EventSource
-  useEffect(() => {
-    return () => {
-      if (esRef.current) {
-        esRef.current.close();
-      }
-    };
-  }, []);
+  // No cleanup needed for ReadableStream
 
   return (
     <>

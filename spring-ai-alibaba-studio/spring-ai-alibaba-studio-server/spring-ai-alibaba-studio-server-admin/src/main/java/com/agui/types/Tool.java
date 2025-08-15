@@ -14,4 +14,16 @@ public class Tool {
         this.description = description;
         this.parameters = parameters;
     }
+
+    public String name() {
+        return name;
+    }
+
+    public String description() {
+        return description;
+    }
+
+    public Object parameters() {
+        return parameters;
+    }
 }

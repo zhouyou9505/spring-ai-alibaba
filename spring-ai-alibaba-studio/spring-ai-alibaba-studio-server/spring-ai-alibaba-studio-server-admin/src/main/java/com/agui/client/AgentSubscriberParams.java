@@ -1,4 +1,4 @@
-package com.agui.client.subscriber;
+package com.agui.client;
 
 import com.agui.client.AbstractAgent;
 

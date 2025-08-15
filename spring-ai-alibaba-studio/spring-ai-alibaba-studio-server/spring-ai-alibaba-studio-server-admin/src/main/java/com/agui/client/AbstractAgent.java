@@ -1,7 +1,5 @@
 package com.agui.client;
 
-import com.agui.client.subscriber.AgentSubscriber;
-import com.agui.client.subscriber.AgentSubscriberParams;
 import com.agui.event.*;
 import com.agui.message.BaseMessage;
 import com.agui.types.RunAgentInput;
@@ -160,13 +158,6 @@ public abstract class AbstractAgent {
                 case STEP_FINISHED -> subscriber.onStepFinishedEvent((StepFinishedEvent) event);
                 case TEXT_MESSAGE_START -> subscriber.onTextMessageStartEvent((TextMessageStartEvent) event);
                 case TEXT_MESSAGE_CONTENT -> subscriber.onTextMessageContentEvent((TextMessageContentEvent) event);
-                case TEXT_MESSAGE_CHUNK -> {
-                    var contentEvent = new TextMessageContentEvent();
-                    contentEvent.setMessageId(((TextMessageChunkEvent)event).getMessageId());
-                    contentEvent.setDelta(((TextMessageChunkEvent)event).getDelta());
-                    contentEvent.setTimestamp(event.getTimestamp());
-                    subscriber.onTextMessageContentEvent(contentEvent);
-                }
                 case TEXT_MESSAGE_END -> subscriber.onTextMessageEndEvent((TextMessageEndEvent) event);
                 case TOOL_CALL_START -> subscriber.onToolCallStartEvent((ToolCallStartEvent) event);
                 case TOOL_CALL_ARGS -> subscriber.onToolCallArgsEvent((ToolCallArgsEvent) event);

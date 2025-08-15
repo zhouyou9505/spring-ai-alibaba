@@ -216,6 +216,9 @@ const simulateAPICall = async (
 
   // Helper function to safely update assistant message
   const safeUpdateAssistantMessage = (updates: Partial<Message>) => {
+    console.log('safeUpdateAssistantMessage called with updates:', updates);
+    console.log('Current assistantMessage:', assistantMessage);
+    
     if (assistantMessage && assistantMessage.type === 'assistant') {
       console.log('Safely updating assistant message:', assistantMessage.id, 'with updates:', updates);
       dispatch({
@@ -226,6 +229,7 @@ const simulateAPICall = async (
           updates
         }
       });
+      console.log('UPDATE_MESSAGE dispatch completed');
     } else {
       console.error('Cannot update assistant message - invalid message:', assistantMessage);
     }
@@ -233,142 +237,259 @@ const simulateAPICall = async (
 
   try {
     // Connect to AG-UI backend for chat messages (running on port 8080)
-    // Use different parameters to avoid conflict with debug stream
-    const url = `http://localhost:8080/api/agui/stream?question=${encodeURIComponent(content)}&filter=ALL&limit=120&mode=chat`;
+    // Use POST request with RunAgentInput structure (AG-UI standard)
+    const url = `http://localhost:8080/api/agui/stream`;
     console.log('Connecting to AG-UI backend for chat:', url);
     
-    const es = new EventSource(url);
+    // Create RunAgentInput structure following AG-UI standard
+    const runAgentInput = {
+      threadId: sessionId,
+      runId: `run_${Date.now()}`,
+      state: null,
+      messages: [
+        {
+          id: `user_msg_${Date.now()}`,
+          role: "user",
+          content: content,
+          name: null
+        }
+      ],
+      tools: [
+        {
+          name: "search_knowledge",
+          description: "Search for relevant information",
+          parameters: {
+            type: "object",
+            properties: {
+              query: { type: "string" },
+              max_results: { type: "number" }
+            }
+          }
+        }
+      ],
+      context: [
+        {
+          description: "chat_session",
+          value: sessionId
+        }
+      ],
+      forwardedProps: null
+    };
+    
+    console.log('Sending RunAgentInput:', runAgentInput);
+    
+    // Use fetch with ReadableStream for POST request (AG-UI standard)
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+      },
+      body: JSON.stringify(runAgentInput)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    if (!response.body) {
+      throw new Error('Response body is null');
+    }
+    
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
     let fullResponse = '';
     let toolCalls: any[] = [];
+    let buffer = ''; // Buffer for incomplete lines
     
-    // Listen to SSE events directly (AG-UI standard)
-    es.onmessage = (ev: MessageEvent) => {
-      try {
-        const data = JSON.parse(ev.data);
-        console.log('Received AG-UI event for chat:', data);
-        
-        // Process all events for this chat session
-        // Note: Backend returns a fixed messageId, so we process all events
-        
-        switch (data.type) {
-          case "TEXT_MESSAGE_START":
-            // Reset response for new message
-            fullResponse = '';
-            console.log('TEXT_MESSAGE_START: Resetting response for assistant message:', assistantMessage.id);
-            break;
+    console.log('Starting SSE stream processing with initial fullResponse:', fullResponse);
+    
+    const processAGUIEvent = (data: any) => {
+      console.log('Processing AG-UI event:', data);
+      console.log('Current fullResponse before processing:', fullResponse);
+      
+      // Process all events for this chat session
+      // AG-UI Event classes have direct fields, not rawEvent
+      switch (data.type) {
+        case "RUN_STARTED":
+          console.log('RUN_STARTED: Agent run started');
+          break;
+          
+        case "STEP_STARTED":
+          console.log('STEP_STARTED: Processing step started');
+          break;
+          
+        case "TEXT_MESSAGE_START":
+          // Reset response for new message
+          fullResponse = '';
+          console.log('TEXT_MESSAGE_START: Starting new text message, reset fullResponse to empty');
+          break;
+          
+        case "TEXT_MESSAGE_CONTENT":
+          // Extract delta directly from event and accumulate content
+          const contentChunk = data.delta || '';
+          console.log('TEXT_MESSAGE_CONTENT: Processing chunk:', contentChunk, 'Current fullResponse:', fullResponse);
+          
+          if (contentChunk.trim()) {
+            fullResponse += contentChunk;
+            console.log('TEXT_MESSAGE_CONTENT: Updated fullResponse to:', fullResponse);
             
-          case "TEXT_MESSAGE_CHUNK":
-            // Accumulate content from AI response (not user input)
-            const chunk = data.delta || '';
-            fullResponse += chunk;
-            console.log('TEXT_MESSAGE_CHUNK: Received chunk:', chunk, 'Full response so far:', fullResponse);
-            
-            // Safely update assistant message with accumulated content
+            // Update assistant message with accumulated content in real-time
+            console.log('TEXT_MESSAGE_CONTENT: About to call safeUpdateAssistantMessage with content:', fullResponse);
             safeUpdateAssistantMessage({ content: fullResponse });
-            break;
+            console.log('TEXT_MESSAGE_CONTENT: Called safeUpdateAssistantMessage with content:', fullResponse);
+          }
+          break;
+          
+        case "TEXT_MESSAGE_END":
+          console.log('TEXT_MESSAGE_END: Message completed, final content:', fullResponse);
+          break;
+          
+        case "TOOL_CALL_START":
+          // Extract tool call info directly from event
+          const newToolCall = {
+            name: data.tool_call_name || 'unknown_tool',
+            arguments: {},
+            result: null,
+            status: 'running'
+          };
+          toolCalls.push(newToolCall);
+          console.log('TOOL_CALL_START: Added tool call:', newToolCall);
+          
+          // Update tool calls array
+          safeUpdateAssistantMessage({ 
+            toolCalls: [...toolCalls]
+          });
+          break;
+          
+        case "TOOL_CALL_ARGS":
+          // Update tool call arguments directly from event
+          if (toolCalls.length > 0) {
+            const lastTool = toolCalls[toolCalls.length - 1];
+            // Parse delta as JSON for arguments
+            try {
+              lastTool.arguments = JSON.parse(data.delta || '{}');
+            } catch (e) {
+              lastTool.arguments = {};
+            }
+            console.log('TOOL_CALL_ARGS: Updated arguments for tool:', lastTool.name, 'args:', lastTool.arguments);
             
-          case "TOOL_CALL_START":
-            // Add tool call
-            const newToolCall = {
-              name: data.toolCallName || 'unknown_tool',
-              arguments: {},
-              result: null,
-              status: 'running' // 添加状态字段
-            };
-            toolCalls.push(newToolCall);
-            console.log('TOOL_CALL_START: Added tool call:', newToolCall);
-            
-            // 只更新工具调用数组，不修改content
+            // Update tool calls array
             safeUpdateAssistantMessage({ 
               toolCalls: [...toolCalls]
             });
-            break;
-            
-          case "TOOL_CALL_ARGS":
-            // Update tool call arguments
-            if (toolCalls.length > 0) {
-              const lastTool = toolCalls[toolCalls.length - 1];
-              lastTool.arguments = data.arguments || {};
-              console.log('TOOL_CALL_ARGS: Updated arguments for tool:', lastTool.name, 'args:', lastTool.arguments);
-              
-              // 只更新工具调用数组，不修改content
-              safeUpdateAssistantMessage({ 
-                toolCalls: [...toolCalls]
-              });
-            }
-            break;
-            
-          case "TOOL_CALL_RESULT":
-            // Update tool call result
-            if (toolCalls.length > 0) {
-              const lastTool = toolCalls[toolCalls.length - 1];
-              lastTool.result = data.content;
-              lastTool.status = 'completed'; // 标记为完成
-              console.log('TOOL_CALL_RESULT: Updated result for tool:', lastTool.name, 'result:', lastTool.result);
-              
-              // 只更新工具调用数组，不修改content
-              safeUpdateAssistantMessage({ 
-                toolCalls: [...toolCalls]
-              });
-            }
-            break;
-            
-          case "RUN_FINISHED":
-            // Finalize message with tool calls
-            console.log('Finalizing assistant message with tool calls:', toolCalls);
-            
-            // 只保留AI回复内容，工具调用状态在MessageList中显示
-            safeUpdateAssistantMessage({ 
-              content: fullResponse || '处理完成',
-              toolCalls: toolCalls.length > 0 ? toolCalls : undefined
-            });
-            es.close();
-            break;
-        }
-      } catch (error) {
-        console.error('Failed to parse AG-UI event:', error);
-      }
-    };
-
-    es.onerror = (error) => {
-      console.error('AG-UI EventSource error:', error);
-      
-      // 标记所有运行中的工具调用为失败
-      toolCalls.forEach(tool => {
-        if (tool.status === 'running') {
-          tool.status = 'failed';
-        }
-      });
-      
-      safeUpdateAssistantMessage({ 
-        content: '抱歉，处理过程中出现错误，请稍后重试。',
-        error: '连接错误',
-        toolCalls: toolCalls.length > 0 ? toolCalls : undefined
-      });
-      es.close();
-    };
-
-    // Set timeout to prevent hanging
-    setTimeout(() => {
-      if (es.readyState !== EventSource.CLOSED) {
-        es.close();
-        
-        // 标记所有运行中的工具调用为失败
-        toolCalls.forEach(tool => {
-          if (tool.status === 'running') {
-            tool.status = 'failed';
           }
-        });
-        
-        if (fullResponse === '') {
+          break;
+          
+        case "TOOL_CALL_RESULT":
+          // Update tool call result directly from event
+          if (toolCalls.length > 0) {
+            const lastTool = toolCalls[toolCalls.length - 1];
+            lastTool.result = data.content;
+            lastTool.status = 'completed';
+            console.log('TOOL_CALL_RESULT: Updated result for tool:', lastTool.name, 'result:', lastTool.result);
+            
+            // Update tool calls array
+            safeUpdateAssistantMessage({ 
+              toolCalls: [...toolCalls]
+            });
+          }
+          break;
+          
+        case "STATE_SNAPSHOT":
+          console.log('STATE_SNAPSHOT: Received state snapshot:', data.snapshot);
+          break;
+          
+        case "MESSAGES_SNAPSHOT":
+          console.log('MESSAGES_SNAPSHOT: Received messages snapshot with', data.messages?.length || 0, 'messages');
+          // Update the final message content from snapshot if we have it
+          if (data.messages && data.messages.length > 0) {
+            const lastMessage = data.messages[data.messages.length - 1];
+            if (lastMessage.role === 'assistant') {
+              safeUpdateAssistantMessage({ 
+                content: lastMessage.content,
+                toolCalls: lastMessage.tool_calls || []
+              });
+            }
+          }
+          break;
+          
+        case "STEP_FINISHED":
+          console.log('STEP_FINISHED: Processing step completed');
+          break;
+          
+        case "RUN_FINISHED":
+          console.log('RUN_FINISHED: Agent run completed with result:', data.result);
+          
+          // Finalize message with accumulated content and tool calls
           safeUpdateAssistantMessage({ 
-            content: '处理超时，请稍后重试。',
-            error: '超时错误',
+            content: fullResponse || '处理完成',
             toolCalls: toolCalls.length > 0 ? toolCalls : undefined
           });
+          break;
+          
+        default:
+          console.log('Unhandled event type:', data.type, data);
+          break;
+      }
+    };
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          console.log('Stream completed');
+          break;
+        }
+        
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk; // Add new chunk to buffer
+        
+        // Process complete lines from buffer
+        const lines = buffer.split('\n');
+        
+        // Keep the last incomplete line in buffer
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          console.log('Processing line:', line);
+          
+          if (line.trim() === '') {
+            continue;
+          }
+          
+          // Handle data:{...} format
+          if (line.includes('data:')) {
+            const dataIndex = line.indexOf('data:');
+            const afterData = line.substring(dataIndex + 5).trim(); // +5 for "data:"
+            
+            if (afterData) {
+              try {
+                const data = JSON.parse(afterData);
+                console.log('=== PARSED EVENT ===');
+                console.log('Event type:', data.type);
+                console.log('Event data:', data);
+                console.log('Current fullResponse before processing:', fullResponse);
+                
+                processAGUIEvent(data);
+                
+                console.log('Current fullResponse after processing:', fullResponse);
+                console.log('=== END EVENT ===');
+              } catch (error) {
+                console.error('Failed to parse AG-UI event:', error, 'from line:', line);
+              }
+            } else {
+              console.log('Line contains data: but no JSON content:', line);
+            }
+          } else {
+            console.log('Line does not contain data: prefix:', line);
+          }
         }
       }
-    }, 30000); // 30 seconds timeout
+    } finally {
+      reader.releaseLock();
+    }
 
   } catch (error) {
     console.error('AG-UI API call failed:', error);
