@@ -348,6 +348,7 @@ const simulateAPICall = async (
         case "TOOL_CALL_START":
           // Extract tool call info directly from event
           const newToolCall = {
+            id: data.tool_call_id, // Store the tool_call_id for matching
             name: data.tool_call_name || 'unknown_tool',
             arguments: {},
             result: null,
@@ -365,40 +366,53 @@ const simulateAPICall = async (
         case "TOOL_CALL_ARGS":
           // Update tool call arguments directly from event
           if (toolCalls.length > 0) {
-            const lastTool = toolCalls[toolCalls.length - 1];
-            // Parse delta as JSON for arguments
-            try {
-              lastTool.arguments = JSON.parse(data.delta || '{}');
-            } catch (e) {
-              lastTool.arguments = {};
+            // Find tool call by tool_call_id for better matching
+            const toolCall = toolCalls.find(tc => tc.id === data.tool_call_id);
+            if (toolCall) {
+              // The delta contains tool parameters in a readable format
+              // Example: "{type=object, properties={query={type=string}, max_results={type=number}}}"
+              toolCall.arguments = data.delta || '{}';
+              console.log('TOOL_CALL_ARGS: Updated arguments for tool:', toolCall.name, 'args:', toolCall.arguments);
+              
+              // Update tool calls array
+              safeUpdateAssistantMessage({ 
+                toolCalls: [...toolCalls]
+              });
             }
-            console.log('TOOL_CALL_ARGS: Updated arguments for tool:', lastTool.name, 'args:', lastTool.arguments);
-            
-            // Update tool calls array
-            safeUpdateAssistantMessage({ 
-              toolCalls: [...toolCalls]
-            });
           }
           break;
           
         case "TOOL_CALL_END":
           // Tool call is complete, update status
           if (toolCalls.length > 0) {
-            const lastTool = toolCalls[toolCalls.length - 1];
-            lastTool.status = 'completed';
-            console.log('TOOL_CALL_END: Tool call completed:', lastTool.name);
-            
-            // Update tool calls array
-            safeUpdateAssistantMessage({ 
-              toolCalls: [...toolCalls]
-            });
+            const toolCall = toolCalls.find(tc => tc.id === data.tool_call_id);
+            if (toolCall) {
+              toolCall.status = 'completed';
+              console.log('TOOL_CALL_END: Tool call completed:', toolCall.name);
+              
+              // Update tool calls array
+              safeUpdateAssistantMessage({ 
+                toolCalls: [...toolCalls]
+              });
+            }
           }
           break;
           
         case "TOOL_CALL_RESULT":
-          // This event type doesn't exist in AG-UI standard
-          // Tool results are handled through tool messages, not events
-          console.log('TOOL_CALL_RESULT: This event type is not part of AG-UI standard');
+          // Tool call result according to AG-UI standard
+          if (toolCalls.length > 0) {
+            const toolCall = toolCalls.find(tc => tc.id === data.tool_call_id);
+            if (toolCall) {
+              toolCall.result = data.content || '';
+              toolCall.status = 'completed';
+              console.log('TOOL_CALL_RESULT: Updated tool call with result:', toolCall);
+              
+              // Update tool calls array
+              safeUpdateAssistantMessage({ 
+                toolCalls: [...toolCalls]
+              });
+            }
+          }
           break;
           
         case "STATE_SNAPSHOT":

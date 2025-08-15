@@ -284,6 +284,11 @@ public abstract class AbstractAgent {
     // Utility method for subclasses to easily emit events
     protected void emitEvent(BaseEvent event, Consumer<BaseEvent> eventHandler) {
         if (eventHandler != null) {
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             eventHandler.accept(event);
         }
     }

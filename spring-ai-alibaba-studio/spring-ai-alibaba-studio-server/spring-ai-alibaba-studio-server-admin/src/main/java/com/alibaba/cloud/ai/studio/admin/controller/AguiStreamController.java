@@ -23,7 +23,7 @@ import java.util.function.Consumer;
  * AG-UI Stream Controller - Standard Implementation
  * Extends AbstractAgent to provide SSE streaming endpoint for AG-UI protocol events
  * following the official specification.
- * 
+ *
  * @see <a href="https://docs.ag-ui.com/concepts/events">AG-UI Events Documentation</a>
  * @see <a href="https://docs.ag-ui.com/concepts/agents">AG-UI Agents Documentation</a>
  * @see <a href="https://docs.ag-ui.com/concepts/messages">AG-UI Messages Documentation</a>
@@ -39,19 +39,19 @@ public class AguiStreamController extends AbstractAgent {
      */
     public AguiStreamController() {
         super(
-            "agui-stream-controller",
-            "AG-UI Standard Stream Controller for AI Studio",
-            null, // threadId will be generated
-            new ArrayList<>(),
-            new State(),
-            false // debug mode
+                "agui-stream-controller",
+                "AG-UI Standard Stream Controller for AI Studio",
+                null, // threadId will be generated
+                new ArrayList<>(),
+                new State(),
+                false // debug mode
         );
     }
 
     /**
      * AG-UI Stream Endpoint - Standard Implementation
      * Streams AG-UI protocol events via Server-Sent Events following the official specification
-     * 
+     *
      * @param input The RunAgentInput containing threadId, runId, messages, tools, etc.
      * @return SseEmitter for streaming AG-UI protocol events
      */
@@ -70,16 +70,16 @@ public class AguiStreamController extends AbstractAgent {
      */
     private SseEmitter createStream(RunAgentInput input) {
         SseEmitter emitter = new SseEmitter(0L);
-        
+
         // Create a simple event handler that sends events via SSE
         Consumer<BaseEvent> sseEventHandler = (event) -> {
             try {
                 // Set timestamp for the event (AG-UI standard)
                 event.setTimestamp((int) (System.currentTimeMillis() / 1000));
-                
+
                 // Send event via SSE
                 emitter.send(SseEmitter.event().data(event));
-                
+
                 // Small delay for better UX
                 Thread.sleep(200);
             } catch (Exception e) {
@@ -99,20 +99,20 @@ public class AguiStreamController extends AbstractAgent {
 
         // Run the agent directly with the SSE event handler
         this.run(input, sseEventHandler)
-            .exceptionally(throwable -> {
-                try {
-                    // Send error event if possible
-                    RunErrorEvent errorEvent = new RunErrorEvent();
-                    errorEvent.setMessage("Error occurred during processing: " + throwable.getMessage());
-                    errorEvent.setCode("PROCESSING_ERROR");
-                    errorEvent.setTimestamp((int) (System.currentTimeMillis() / 1000));
-                    emitter.send(SseEmitter.event().data(errorEvent));
-                    emitter.completeWithError(throwable);
-                } catch (Exception e) {
-                    emitter.completeWithError(throwable);
-                }
-                return null;
-            });
+                .exceptionally(throwable -> {
+                    try {
+                        // Send error event if possible
+                        RunErrorEvent errorEvent = new RunErrorEvent();
+                        errorEvent.setMessage("Error occurred during processing: " + throwable.getMessage());
+                        errorEvent.setCode("PROCESSING_ERROR");
+                        errorEvent.setTimestamp((int) (System.currentTimeMillis() / 1000));
+                        emitter.send(SseEmitter.event().data(errorEvent));
+                        emitter.completeWithError(throwable);
+                    } catch (Exception e) {
+                        emitter.completeWithError(throwable);
+                    }
+                    return null;
+                });
 
         return emitter;
     }
@@ -126,7 +126,7 @@ public class AguiStreamController extends AbstractAgent {
         return CompletableFuture.runAsync(() -> {
             try {
                 String messageId = "msg-" + UUID.randomUUID().toString().substring(0, 8);
-                
+
                 // 1. LIFECYCLE PATTERN: Start the run
                 RunStartedEvent runStarted = new RunStartedEvent();
                 runStarted.setThreadId(this.threadId);
@@ -168,9 +168,11 @@ public class AguiStreamController extends AbstractAgent {
                 emitEvent(textEnd, eventHandler);
 
                 // 3. TOOL CALL PATTERN: Process tools if provided
+                List<String> toolCallIds = new ArrayList<>();
                 if (input.tools() != null && !input.tools().isEmpty()) {
                     for (Tool tool : input.tools()) {
                         String toolCallId = "tool-" + UUID.randomUUID().toString().substring(0, 8);
+                        toolCallIds.add(toolCallId); // Store the toolCallId for later use
 
                         // Start tool call
                         ToolCallStartEvent toolStart = new ToolCallStartEvent();
@@ -192,9 +194,13 @@ public class AguiStreamController extends AbstractAgent {
                         toolEnd.setToolCallId(toolCallId);
                         emitEvent(toolEnd, eventHandler);
 
-                        // Note: Tool results are handled through tool messages, not events
-                        // According to AG-UI standard, TOOL_CALL_RESULT event doesn't exist
-                        // Tool results should be included in the messages snapshot
+                        // Tool call result according to AG-UI standard
+                        ToolCallResultEvent toolResult = new ToolCallResultEvent();
+                        toolResult.setMessageId(messageId);
+                        toolResult.setToolCallId(toolCallId);
+                        toolResult.setContent("基于工具 " + tool.name() + " 的执行结果：[相关文档1, 相关文档2, 相关文档3]");
+                        toolResult.setRole("tool");
+                        emitEvent(toolResult, eventHandler);
                     }
                 }
 
@@ -202,10 +208,10 @@ public class AguiStreamController extends AbstractAgent {
                 // State snapshot
                 StateSnapshotEvent stateSnapshot = new StateSnapshotEvent();
                 stateSnapshot.setSnapshot(Map.of(
-                    "progress", 0.8,
-                    "status", "completed",
-                    "messageCount", input.messages() != null ? input.messages().size() + 1 : 1,
-                    "toolCallCount", input.tools() != null ? input.tools().size() : 1
+                        "progress", 0.8,
+                        "status", "completed",
+                        "messageCount", input.messages() != null ? input.messages().size() + 1 : 1,
+                        "toolCallCount", input.tools() != null ? input.tools().size() : 1
                 ));
                 emitEvent(stateSnapshot, eventHandler);
 
@@ -214,24 +220,15 @@ public class AguiStreamController extends AbstractAgent {
                 if (input.messages() != null) {
                     snapshotMessages.addAll(input.messages());
                 }
-                
+
                 // Add the new assistant message
                 AssistantMessage assistantMessage = new AssistantMessage();
                 assistantMessage.setId(messageId);
                 assistantMessage.setContent(response);
                 snapshotMessages.add(assistantMessage);
 
-                // Add tool result messages according to AG-UI standard
-                if (input.tools() != null && !input.tools().isEmpty()) {
-                    for (Tool tool : input.tools()) {
-                        // Create tool message with execution result
-                        com.agui.message.ToolMessage toolMessage = new com.agui.message.ToolMessage();
-                        toolMessage.setId("tool-result-" + UUID.randomUUID().toString().substring(0, 8));
-                        toolMessage.setContent("基于工具 " + tool.name() + " 的执行结果：[相关文档1, 相关文档2, 相关文档3]");
-                        toolMessage.setToolCallId("tool-" + UUID.randomUUID().toString().substring(0, 8));
-                        snapshotMessages.add(toolMessage);
-                    }
-                }
+                // Note: Tool results are now sent via TOOL_CALL_RESULT events
+                // No need to add tool messages to the snapshot
 
                 MessagesSnapshotEvent messagesSnapshot = new MessagesSnapshotEvent();
                 messagesSnapshot.setMessages(snapshotMessages);
@@ -241,15 +238,15 @@ public class AguiStreamController extends AbstractAgent {
                 StepFinishedEvent stepFinished = new StepFinishedEvent();
                 stepFinished.setStepName("process_question");
                 emitEvent(stepFinished, eventHandler);
-                
+
                 // End the run
                 RunFinishedEvent runFinished = new RunFinishedEvent();
                 runFinished.setThreadId(this.threadId);
                 runFinished.setRunId(input.runId());
                 runFinished.setResult(Map.of(
-                    "ok", true,
-                    "messageCount", snapshotMessages.size(),
-                    "toolCallCount", input.tools() != null ? input.tools().size() : 1
+                        "ok", true,
+                        "messageCount", snapshotMessages.size(),
+                        "toolCallCount", input.tools() != null ? input.tools().size() : 1
                 ));
                 emitEvent(runFinished, eventHandler);
 
