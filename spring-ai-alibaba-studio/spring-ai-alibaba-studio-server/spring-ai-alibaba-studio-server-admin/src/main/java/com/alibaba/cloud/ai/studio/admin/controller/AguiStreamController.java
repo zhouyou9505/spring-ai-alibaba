@@ -65,7 +65,7 @@ public class AguiStreamController extends AbstractAgent {
      * Follows the official AG-UI event flow patterns:
      * 1. Lifecycle Pattern: RunStarted → StepStarted → StepFinished → RunFinished
      * 2. Start-Content-End Pattern: TextMessageStart → TextMessageContent → TextMessageEnd
-     * 3. Tool Call Pattern: ToolCallStart → ToolCallArgs → ToolCallEnd → ToolCallResult
+     * 3. Tool Call Pattern: ToolCallStart → ToolCallArgs → ToolCallEnd
      * 4. Snapshot-Delta Pattern: StateSnapshot, MessagesSnapshot
      */
     private SseEmitter createStream(RunAgentInput input) {
@@ -192,14 +192,9 @@ public class AguiStreamController extends AbstractAgent {
                         toolEnd.setToolCallId(toolCallId);
                         emitEvent(toolEnd, eventHandler);
 
-                        // Tool call result
-                        String toolResult = "基于工具 " + tool.name() + " 的执行结果：[相关文档1, 相关文档2, 相关文档3]";
-                        ToolCallResultEvent toolResultEvent = new ToolCallResultEvent();
-                        toolResultEvent.setToolCallId(toolCallId);
-                        toolResultEvent.setContent(toolResult);
-                        toolResultEvent.setMessageId(messageId);
-                        toolResultEvent.setRole("tool");
-                        emitEvent(toolResultEvent, eventHandler);
+                        // Note: Tool results are handled through tool messages, not events
+                        // According to AG-UI standard, TOOL_CALL_RESULT event doesn't exist
+                        // Tool results should be included in the messages snapshot
                     }
                 }
 
@@ -225,6 +220,18 @@ public class AguiStreamController extends AbstractAgent {
                 assistantMessage.setId(messageId);
                 assistantMessage.setContent(response);
                 snapshotMessages.add(assistantMessage);
+
+                // Add tool result messages according to AG-UI standard
+                if (input.tools() != null && !input.tools().isEmpty()) {
+                    for (Tool tool : input.tools()) {
+                        // Create tool message with execution result
+                        com.agui.message.ToolMessage toolMessage = new com.agui.message.ToolMessage();
+                        toolMessage.setId("tool-result-" + UUID.randomUUID().toString().substring(0, 8));
+                        toolMessage.setContent("基于工具 " + tool.name() + " 的执行结果：[相关文档1, 相关文档2, 相关文档3]");
+                        toolMessage.setToolCallId("tool-" + UUID.randomUUID().toString().substring(0, 8));
+                        snapshotMessages.add(toolMessage);
+                    }
+                }
 
                 MessagesSnapshotEvent messagesSnapshot = new MessagesSnapshotEvent();
                 messagesSnapshot.setMessages(snapshotMessages);

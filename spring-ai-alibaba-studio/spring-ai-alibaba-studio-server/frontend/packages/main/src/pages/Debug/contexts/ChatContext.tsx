@@ -381,19 +381,24 @@ const simulateAPICall = async (
           }
           break;
           
-        case "TOOL_CALL_RESULT":
-          // Update tool call result directly from event
+        case "TOOL_CALL_END":
+          // Tool call is complete, update status
           if (toolCalls.length > 0) {
             const lastTool = toolCalls[toolCalls.length - 1];
-            lastTool.result = data.content;
             lastTool.status = 'completed';
-            console.log('TOOL_CALL_RESULT: Updated result for tool:', lastTool.name, 'result:', lastTool.result);
+            console.log('TOOL_CALL_END: Tool call completed:', lastTool.name);
             
             // Update tool calls array
             safeUpdateAssistantMessage({ 
               toolCalls: [...toolCalls]
             });
           }
+          break;
+          
+        case "TOOL_CALL_RESULT":
+          // This event type doesn't exist in AG-UI standard
+          // Tool results are handled through tool messages, not events
+          console.log('TOOL_CALL_RESULT: This event type is not part of AG-UI standard');
           break;
           
         case "STATE_SNAPSHOT":
@@ -409,6 +414,28 @@ const simulateAPICall = async (
               safeUpdateAssistantMessage({ 
                 content: lastMessage.content,
                 toolCalls: lastMessage.tool_calls || []
+              });
+            }
+            
+            // Process tool messages for tool results
+            const toolMessages = data.messages.filter((msg: any) => msg.role === 'tool');
+            if (toolMessages.length > 0) {
+              console.log('Processing tool messages:', toolMessages);
+              toolMessages.forEach((toolMsg: any) => {
+                // Find corresponding tool call and update with result
+                if (toolCalls.length > 0) {
+                  const toolCall = toolCalls.find(tc => tc.name === toolMsg.name || tc.id === toolMsg.tool_call_id);
+                  if (toolCall) {
+                    toolCall.result = toolMsg.content;
+                    toolCall.status = 'completed';
+                    console.log('Updated tool call with result:', toolCall);
+                  }
+                }
+              });
+              
+              // Update assistant message with updated tool calls
+              safeUpdateAssistantMessage({ 
+                toolCalls: [...toolCalls]
               });
             }
           }
