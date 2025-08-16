@@ -285,7 +285,7 @@ public abstract class AbstractAgent {
     protected void emitEvent(BaseEvent event, Consumer<BaseEvent> eventHandler) {
         if (eventHandler != null) {
             try {
-                Thread.sleep(3000);
+                Thread.sleep(1000);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

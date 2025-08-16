@@ -26,7 +26,7 @@ interface AguiEvent {
 }
 
 const MessageArea: React.FC = () => {
-  const { currentSession } = useChatContext();
+  const { currentThread } = useChatContext();
   const { config, toggleDebugInfo } = useConfigContext();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -49,11 +49,11 @@ const MessageArea: React.FC = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [currentSession?.messages, config.autoScroll]);
+  }, [currentThread?.messages, config.autoScroll]);
 
   const handleClearChat = () => {
-    if (currentSession && window.confirm('确定要清空当前对话吗？')) {
-      // Clear messages in current session
+    if (currentThread && window.confirm('确定要清空当前对话吗？')) {
+      // Clear messages in current thread
       // This would need to be implemented in the context
     }
   };
@@ -249,7 +249,7 @@ const MessageArea: React.FC = () => {
     <>
       <div className={styles.chatHeader}>
         <h3 className={styles.chatTitle}>
-          {currentSession ? currentSession.title : '选择或创建一个对话'}
+          {currentThread ? currentThread.title : '选择或创建一个对话'}
         </h3>
         <div className={styles.headerActions}>
           <Button
@@ -265,15 +265,15 @@ const MessageArea: React.FC = () => {
             onClick={handleClearChat}
             size="small"
             title="清空对话"
-            disabled={!currentSession || currentSession.messages.length === 0}
+            disabled={!currentThread || currentThread.messages.length === 0}
           />
         </div>
       </div>
 
       <div className={styles.messageContainer}>
-        {currentSession ? (
+        {currentThread ? (
           <>
-            <MessageList messages={currentSession.messages} />
+            <MessageList messages={currentThread.messages} />
             <div ref={messagesEndRef} />
           </>
         ) : (
@@ -292,7 +292,7 @@ const MessageArea: React.FC = () => {
         )}
       </div>
 
-      {currentSession && (
+      {currentThread && (
         <div className={styles.inputArea}>
           <MessageInput />
         </div>

@@ -10,7 +10,7 @@ export interface Message {
   attachments?: File[];
 }
 
-export interface ChatSession {
+export interface ChatThread {
   id: string;
   title: string;
   messages: Message[];
@@ -19,27 +19,28 @@ export interface ChatSession {
 }
 
 interface ChatState {
-  sessions: ChatSession[];
-  currentSessionId: string | null;
+  threads: ChatThread[];
+  currentThreadId: string | null;
   isLoading: boolean;
   isStreaming: boolean;
   error: string | null;
 }
 
 type ChatAction =
-  | { type: 'SET_SESSIONS'; payload: ChatSession[] }
-  | { type: 'ADD_SESSION'; payload: ChatSession }
-  | { type: 'SET_CURRENT_SESSION'; payload: string }
-  | { type: 'ADD_MESSAGE'; payload: { sessionId: string; message: Message } }
-  | { type: 'UPDATE_MESSAGE'; payload: { sessionId: string; messageId: string; updates: Partial<Message> } }
+  | { type: 'SET_THREADS'; payload: ChatThread[] }
+  | { type: 'ADD_THREAD'; payload: ChatThread }
+  | { type: 'SET_CURRENT_THREAD'; payload: string }
+  | { type: 'ADD_MESSAGE'; payload: { threadId: string; message: Message } }
+  | { type: 'UPDATE_MESSAGE'; payload: { threadId: string; messageId: string; updates: Partial<Message> } }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_STREAMING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'DELETE_SESSION'; payload: string };
+  | { type: 'DELETE_THREAD'; payload: string }
+  | { type: 'INITIALIZE_THREAD_MESSAGES'; payload: { threadId: string; messages: Message[] } };
 
 const initialState: ChatState = {
-  sessions: [],
-  currentSessionId: null,
+  threads: [],
+  currentThreadId: null,
   isLoading: false,
   isStreaming: false,
   error: null,
@@ -47,48 +48,62 @@ const initialState: ChatState = {
 
 const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
   switch (action.type) {
-    case 'SET_SESSIONS':
-      return { ...state, sessions: action.payload };
+    case 'SET_THREADS':
+      return { ...state, threads: action.payload };
 
-    case 'ADD_SESSION':
+    case 'ADD_THREAD':
       return {
         ...state,
-        sessions: [action.payload, ...state.sessions],
-        currentSessionId: action.payload.id,
+        threads: [action.payload, ...state.threads],
+        currentThreadId: action.payload.id,
       };
 
-    case 'SET_CURRENT_SESSION':
-      return { ...state, currentSessionId: action.payload };
+    case 'SET_CURRENT_THREAD':
+      return { ...state, currentThreadId: action.payload };
 
     case 'ADD_MESSAGE':
       return {
         ...state,
-        sessions: state.sessions.map(session =>
-          session.id === action.payload.sessionId
+        threads: state.threads.map(thread =>
+          thread.id === action.payload.threadId
             ? {
-                ...session,
-                messages: [...session.messages, action.payload.message],
+                ...thread,
+                messages: [...thread.messages, action.payload.message],
                 updatedAt: new Date(),
               }
-            : session
+            : thread
         ),
       };
 
     case 'UPDATE_MESSAGE':
       return {
         ...state,
-        sessions: state.sessions.map(session =>
-          session.id === action.payload.sessionId
+        threads: state.threads.map(thread =>
+          thread.id === action.payload.threadId
             ? {
-                ...session,
-                messages: session.messages.map(msg =>
+                ...thread,
+                messages: thread.messages.map(msg =>
                   msg.id === action.payload.messageId
                     ? { ...msg, ...action.payload.updates }
                     : msg
                 ),
                 updatedAt: new Date(),
               }
-            : session
+            : thread
+        ),
+      };
+
+    case 'INITIALIZE_THREAD_MESSAGES':
+      return {
+        ...state,
+        threads: state.threads.map(thread =>
+          thread.id === action.payload.threadId
+            ? {
+                ...thread,
+                messages: action.payload.messages,
+                updatedAt: new Date(),
+              }
+            : thread
         ),
       };
 
@@ -101,14 +116,14 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
     case 'SET_ERROR':
       return { ...state, error: action.payload };
 
-    case 'DELETE_SESSION':
-      const filteredSessions = state.sessions.filter(s => s.id !== action.payload);
+    case 'DELETE_THREAD':
+      const filteredThreads = state.threads.filter(t => t.id !== action.payload);
       return {
         ...state,
-        sessions: filteredSessions,
-        currentSessionId: state.currentSessionId === action.payload
-          ? (filteredSessions.length > 0 ? filteredSessions[0].id : null)
-          : state.currentSessionId,
+        threads: filteredThreads,
+        currentThreadId: state.currentThreadId === action.payload
+          ? (filteredThreads.length > 0 ? filteredThreads[0].id : null)
+          : state.currentThreadId,
       };
 
     default:
@@ -119,10 +134,11 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
 interface ChatContextValue {
   state: ChatState;
   dispatch: React.Dispatch<ChatAction>;
-  currentSession: ChatSession | null;
-  createNewSession: () => void;
+  currentThread: ChatThread | null;
+  createNewThread: () => void;
   sendMessage: (content: string, attachments?: File[]) => Promise<void>;
-  deleteSession: (sessionId: string) => void;
+  deleteThread: (threadId: string) => void;
+  switchThread: (threadId: string) => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextValue | undefined>(undefined);
@@ -130,22 +146,22 @@ const ChatContext = createContext<ChatContextValue | undefined>(undefined);
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(chatReducer, initialState);
 
-  const currentSession = state.sessions.find(s => s.id === state.currentSessionId) || null;
+  const currentThread = state.threads.find(t => t.id === state.currentThreadId) || null;
 
-  const createNewSession = () => {
-    const newSession: ChatSession = {
-      id: `session_${Date.now()}`,
-      title: `对话 ${state.sessions.length + 1}`,
+  const createNewThread = () => {
+    const newThread: ChatThread = {
+      id: `thread_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      title: `对话 ${state.threads.length + 1}`,
       messages: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    dispatch({ type: 'ADD_SESSION', payload: newSession });
+    dispatch({ type: 'ADD_THREAD', payload: newThread });
   };
 
   const sendMessage = async (content: string, attachments?: File[]) => {
-    if (!currentSession) {
-      createNewSession();
+    if (!currentThread) {
+      createNewThread();
       return;
     }
 
@@ -160,14 +176,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log('Adding user message:', userMessage.id, 'with content:', userMessage.content);
     dispatch({
       type: 'ADD_MESSAGE',
-      payload: { sessionId: currentSession.id, message: userMessage }
+      payload: { threadId: currentThread.id, message: userMessage }
     });
 
     dispatch({ type: 'SET_STREAMING', payload: true });
 
     try {
       // Call real AG-UI backend API
-      await simulateAPICall(content, currentSession.id, dispatch);
+      await simulateAPICall(content, currentThread.id, dispatch);
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: '发送消息失败' });
     } finally {
@@ -175,17 +191,59 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const deleteSession = (sessionId: string) => {
-    dispatch({ type: 'DELETE_SESSION', payload: sessionId });
+  const deleteThread = (threadId: string) => {
+    dispatch({ type: 'DELETE_THREAD', payload: threadId });
+  };
+
+  // 添加初始化thread消息的函数
+  const initializeThreadMessages = async (threadId: string) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      
+      // 调用新的init接口
+      const response = await fetch(`http://localhost:8080/api/agui/init/${threadId}`);
+      const messagesSnapshot = await response.json();
+      
+      // 转换AG-UI消息格式到前端格式
+      const convertedMessages: Message[] = messagesSnapshot.messages.map((msg: any) => ({
+        id: msg.id || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content || '',
+        timestamp: new Date(),
+        toolCalls: msg.tool_calls || [],
+      }));
+      
+      // 更新thread的消息
+      dispatch({ 
+        type: 'INITIALIZE_THREAD_MESSAGES', 
+        payload: { threadId, messages: convertedMessages } 
+      });
+      
+    } catch (error) {
+      console.error('Failed to initialize thread messages:', error);
+      dispatch({ type: 'SET_ERROR', payload: '初始化对话记录失败' });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
+
+  // 添加切换thread的函数
+  const switchThread = async (threadId: string) => {
+    // 先设置当前thread
+    dispatch({ type: 'SET_CURRENT_THREAD', payload: threadId });
+    
+    // 然后初始化该thread的消息
+    await initializeThreadMessages(threadId);
   };
 
   const value: ChatContextValue = {
     state,
     dispatch,
-    currentSession,
-    createNewSession,
+    currentThread,
+    createNewThread,
     sendMessage,
-    deleteSession,
+    deleteThread,
+    switchThread,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
@@ -194,7 +252,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 // Real API call to AG-UI backend
 const simulateAPICall = async (
   content: string,
-  sessionId: string,
+  threadId: string,
   dispatch: React.Dispatch<ChatAction>
 ) => {
   // Create initial assistant message
@@ -205,26 +263,19 @@ const simulateAPICall = async (
     timestamp: new Date(),
   };
 
-  console.log('Creating assistant message with ID:', assistantMessage.id);
-  console.log('User question:', content);
-
-  console.log('Adding assistant message:', assistantMessage.id, 'with content:', assistantMessage.content);
   dispatch({
     type: 'ADD_MESSAGE',
-    payload: { sessionId, message: assistantMessage }
+    payload: { threadId, message: assistantMessage }
   });
 
   // Helper function to safely update assistant message
   const safeUpdateAssistantMessage = (updates: Partial<Message>) => {
-    console.log('safeUpdateAssistantMessage called with updates:', updates);
-    console.log('Current assistantMessage:', assistantMessage);
     
     if (assistantMessage && assistantMessage.type === 'assistant') {
-      console.log('Safely updating assistant message:', assistantMessage.id, 'with updates:', updates);
       dispatch({
         type: 'UPDATE_MESSAGE',
         payload: { 
-          sessionId, 
+          threadId, 
           messageId: assistantMessage.id, 
           updates
         }
@@ -239,11 +290,9 @@ const simulateAPICall = async (
     // Connect to AG-UI backend for chat messages (running on port 8080)
     // Use POST request with RunAgentInput structure (AG-UI standard)
     const url = `http://localhost:8080/api/agui/stream`;
-    console.log('Connecting to AG-UI backend for chat:', url);
-    
     // Create RunAgentInput structure following AG-UI standard
     const runAgentInput = {
-      threadId: sessionId,
+      threadId: threadId,
       runId: `run_${Date.now()}`,
       state: null,
       messages: [
@@ -269,14 +318,12 @@ const simulateAPICall = async (
       ],
       context: [
         {
-          description: "chat_session",
-          value: sessionId
+          description: "chat_thread",
+          value: threadId
         }
       ],
       forwardedProps: null
     };
-    
-    console.log('Sending RunAgentInput:', runAgentInput);
     
     // Use fetch with ReadableStream for POST request (AG-UI standard)
     const response = await fetch(url, {
@@ -301,8 +348,6 @@ const simulateAPICall = async (
     let fullResponse = '';
     let toolCalls: any[] = [];
     let buffer = ''; // Buffer for incomplete lines
-    
-    console.log('Starting SSE stream processing with initial fullResponse:', fullResponse);
     
     const processAGUIEvent = (data: any) => {
       console.log('Processing AG-UI event:', data);
@@ -420,48 +465,14 @@ const simulateAPICall = async (
           break;
           
         case "MESSAGES_SNAPSHOT":
-          console.log('MESSAGES_SNAPSHOT: Received messages snapshot with', data.messages?.length || 0, 'messages');
-          // Update the final message content from snapshot if we have it
-          if (data.messages && data.messages.length > 0) {
-            const lastMessage = data.messages[data.messages.length - 1];
-            if (lastMessage.role === 'assistant') {
-              safeUpdateAssistantMessage({ 
-                content: lastMessage.content,
-                toolCalls: lastMessage.tool_calls || []
-              });
-            }
-            
-            // Process tool messages for tool results
-            const toolMessages = data.messages.filter((msg: any) => msg.role === 'tool');
-            if (toolMessages.length > 0) {
-              console.log('Processing tool messages:', toolMessages);
-              toolMessages.forEach((toolMsg: any) => {
-                // Find corresponding tool call and update with result
-                if (toolCalls.length > 0) {
-                  const toolCall = toolCalls.find(tc => tc.name === toolMsg.name || tc.id === toolMsg.tool_call_id);
-                  if (toolCall) {
-                    toolCall.result = toolMsg.content;
-                    toolCall.status = 'completed';
-                    console.log('Updated tool call with result:', toolCall);
-                  }
-                }
-              });
-              
-              // Update assistant message with updated tool calls
-              safeUpdateAssistantMessage({ 
-                toolCalls: [...toolCalls]
-              });
-            }
-          }
+          // 移除这个case的处理，因为现在由init接口处理
+          console.log('MESSAGES_SNAPSHOT: Ignored - handled by init endpoint');
           break;
           
         case "STEP_FINISHED":
-          console.log('STEP_FINISHED: Processing step completed');
           break;
           
         case "RUN_FINISHED":
-          console.log('RUN_FINISHED: Agent run completed with result:', data.result);
-          
           // Finalize message with accumulated content and tool calls
           safeUpdateAssistantMessage({ 
             content: fullResponse || '处理完成',
@@ -470,7 +481,6 @@ const simulateAPICall = async (
           break;
           
         default:
-          console.log('Unhandled event type:', data.type, data);
           break;
       }
     };
@@ -480,7 +490,6 @@ const simulateAPICall = async (
         const { done, value } = await reader.read();
         
         if (done) {
-          console.log('Stream completed');
           break;
         }
         
@@ -494,7 +503,6 @@ const simulateAPICall = async (
         buffer = lines.pop() || '';
         
         for (const line of lines) {
-          console.log('Processing line:', line);
           
           if (line.trim() === '') {
             continue;

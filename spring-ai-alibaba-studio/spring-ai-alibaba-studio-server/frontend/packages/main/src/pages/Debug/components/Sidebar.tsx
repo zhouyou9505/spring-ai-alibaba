@@ -8,11 +8,11 @@ import styles from '../index.module.less';
 const { Option } = Select;
 
 const Sidebar: React.FC = () => {
-  const { state, createNewSession, deleteSession, dispatch } = useChatContext();
+  const { state, createNewThread, deleteThread, switchThread } = useChatContext();
   const { config, updateModelConfig, toggleToolCalls, toggleDebugInfo } = useConfigContext();
 
-  const handleSessionClick = (sessionId: string) => {
-    dispatch({ type: 'SET_CURRENT_SESSION', payload: sessionId });
+  const handleThreadClick = async (threadId: string) => {
+    await switchThread(threadId);
   };
 
   const formatTime = (date: Date) => {
@@ -31,7 +31,7 @@ const Sidebar: React.FC = () => {
         <Button
           type="primary"
           icon={<PlusOutlined />}
-          onClick={createNewSession}
+          onClick={createNewThread}
           size="small"
         >
           新对话
@@ -106,20 +106,20 @@ const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      <div className={styles.sessionList}>
-        {state.sessions.map((session) => (
+      <div className={styles.threadList}>
+        {state.threads.map((thread) => (
           <div
-            key={session.id}
-            className={`${styles.sessionItem} ${
-              state.currentSessionId === session.id ? styles.active : ''
+            key={thread.id}
+            className={`${styles.threadItem} ${
+              state.currentThreadId === thread.id ? styles.active : ''
             }`}
-            onClick={() => handleSessionClick(session.id)}
+            onClick={() => handleThreadClick(thread.id)}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div className={styles.sessionTitle}>{session.title}</div>
-                <div className={styles.sessionTime}>
-                  {formatTime(session.updatedAt)} · {session.messages.length} 条消息
+                <div className={styles.threadTitle}>{thread.title}</div>
+                <div className={styles.threadTime}>
+                  {formatTime(thread.updatedAt)} · {thread.messages.length} 条消息
                 </div>
               </div>
               <Tooltip title="删除对话">
@@ -129,7 +129,7 @@ const Sidebar: React.FC = () => {
                   icon={<DeleteOutlined />}
                   onClick={(e) => {
                     e.stopPropagation();
-                    deleteSession(session.id);
+                    deleteThread(thread.id);
                   }}
                   style={{ opacity: 0.6 }}
                 />
@@ -138,7 +138,7 @@ const Sidebar: React.FC = () => {
           </div>
         ))}
 
-        {state.sessions.length === 0 && (
+        {state.threads.length === 0 && (
           <div style={{ padding: 16, textAlign: 'center', color: '#999', fontSize: 14 }}>
             暂无对话记录
             <br />

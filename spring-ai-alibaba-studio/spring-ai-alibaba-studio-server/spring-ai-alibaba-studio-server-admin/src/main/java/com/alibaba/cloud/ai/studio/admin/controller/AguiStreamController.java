@@ -1,13 +1,9 @@
 package com.alibaba.cloud.ai.studio.admin.controller;
 
 import com.agui.client.AbstractAgent;
-import com.agui.client.AgentSubscriber;
-import com.agui.client.AgentSubscriberParams;
-import com.agui.client.RunAgentParameters;
 import com.agui.event.*;
 import com.agui.message.BaseMessage;
 import com.agui.message.AssistantMessage;
-import com.agui.message.UserMessage;
 import com.agui.types.RunAgentInput;
 import com.agui.types.Tool;
 import com.agui.types.State;
@@ -49,8 +45,29 @@ public class AguiStreamController extends AbstractAgent {
     }
 
     /**
+     * AG-UI Init Endpoint - Initialize chat history
+     * Returns MessagesSnapshot for frontend to initialize chat context
+     *
+     * @param threadId The thread ID to get chat history for
+     * @return MessagesSnapshotEvent containing all messages for the thread
+     */
+    @GetMapping(value = "/init/{threadId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public MessagesSnapshotEvent init(@PathVariable String threadId) {
+        // Set the thread ID
+        this.threadId = threadId;
+        
+        // Create and return MessagesSnapshot with current messages
+        MessagesSnapshotEvent messagesSnapshot = new MessagesSnapshotEvent();
+        messagesSnapshot.setMessages(this.messages);
+        messagesSnapshot.setTimestamp((int) (System.currentTimeMillis() / 1000));
+        
+        return messagesSnapshot;
+    }
+
+    /**
      * AG-UI Stream Endpoint - Standard Implementation
      * Streams AG-UI protocol events via Server-Sent Events following the official specification
+     * Note: This endpoint no longer returns MessagesSnapshot as it's handled by /init endpoint
      *
      * @param input The RunAgentInput containing threadId, runId, messages, tools, etc.
      * @return SseEmitter for streaming AG-UI protocol events
@@ -66,7 +83,10 @@ public class AguiStreamController extends AbstractAgent {
      * 1. Lifecycle Pattern: RunStarted → StepStarted → StepFinished → RunFinished
      * 2. Start-Content-End Pattern: TextMessageStart → TextMessageContent → TextMessageEnd
      * 3. Tool Call Pattern: ToolCallStart → ToolCallArgs → ToolCallEnd
-     * 4. Snapshot-Delta Pattern: StateSnapshot, MessagesSnapshot
+     * 4. Snapshot-Delta Pattern: StateSnapshot
+     * 
+     * Note: MessagesSnapshot is now handled by separate /init endpoint
+     * Frontend should call /init/{threadId} before starting stream to get chat history
      */
     private SseEmitter createStream(RunAgentInput input) {
         SseEmitter emitter = new SseEmitter(0L);
@@ -119,7 +139,17 @@ public class AguiStreamController extends AbstractAgent {
 
     /**
      * Implementation of AbstractAgent's abstract run method
-     * This method implements the core AG-UI event flow according to the standard
+     * This method implements the core AG-UI event flow according to the standard:
+     * 
+     * 1. RunStarted - Initialize the run
+     * 2. StepStarted - Begin processing
+     * 3. TextMessage streaming - Stream the response
+     * 4. Tool calls processing - Handle any tool executions
+     * 5. StateSnapshot - Provide current state
+     * 6. StepFinished - Complete processing
+     * 7. RunFinished - End the run
+     * 
+     * Note: MessagesSnapshot is handled by separate /init endpoint
      */
     @Override
     protected CompletableFuture<Void> run(RunAgentInput input, Consumer<BaseEvent> eventHandler) {
@@ -132,6 +162,9 @@ public class AguiStreamController extends AbstractAgent {
                 runStarted.setThreadId(this.threadId);
                 runStarted.setRunId(input.runId());
                 emitEvent(runStarted, eventHandler);
+
+                // Note: MessagesSnapshot is now handled by /init endpoint
+                // Frontend should call /init/{threadId} before starting stream to get chat history
 
                 // Start processing step
                 StepStartedEvent stepStarted = new StepStartedEvent();
@@ -215,24 +248,38 @@ public class AguiStreamController extends AbstractAgent {
                 ));
                 emitEvent(stateSnapshot, eventHandler);
 
-                // Messages snapshot
-                List<BaseMessage> snapshotMessages = new ArrayList<>();
-                if (input.messages() != null) {
-                    snapshotMessages.addAll(input.messages());
-                }
-
-                // Add the new assistant message
+                // Create and add the new assistant message to the agent's message state
                 AssistantMessage assistantMessage = new AssistantMessage();
                 assistantMessage.setId(messageId);
                 assistantMessage.setContent(response);
-                snapshotMessages.add(assistantMessage);
+                
+                // Add tool calls to the assistant message for MESSAGES_SNAPSHOT
+                if (input.tools() != null && !input.tools().isEmpty()) {
+                    List<com.agui.types.ToolCall> toolCalls = new ArrayList<>();
+                    for (int i = 0; i < input.tools().size(); i++) {
+                        Tool tool = input.tools().get(i);
+                        String toolCallId = toolCallIds.get(i);
+                        
+                        com.agui.types.FunctionCall functionCall = new com.agui.types.FunctionCall(
+                            tool.name(),
+                            tool.parameters() != null ? tool.parameters().toString() : "{}"
+                        );
+                        
+                        com.agui.types.ToolCall toolCall = new com.agui.types.ToolCall(
+                            toolCallId,
+                            "function",
+                            functionCall
+                        );
+                        toolCalls.add(toolCall);
+                    }
+                    assistantMessage.setToolCalls(toolCalls);
+                }
+                
+                // Add the assistant message to the agent's message state
+                this.addMessage(assistantMessage);
 
-                // Note: Tool results are now sent via TOOL_CALL_RESULT events
-                // No need to add tool messages to the snapshot
-
-                MessagesSnapshotEvent messagesSnapshot = new MessagesSnapshotEvent();
-                messagesSnapshot.setMessages(snapshotMessages);
-                emitEvent(messagesSnapshot, eventHandler);
+                // Note: MessagesSnapshot is already sent at the beginning for frontend initialization
+                // No need to send it again here as per AG-UI standard
 
                 // Finish processing step
                 StepFinishedEvent stepFinished = new StepFinishedEvent();
@@ -245,7 +292,7 @@ public class AguiStreamController extends AbstractAgent {
                 runFinished.setRunId(input.runId());
                 runFinished.setResult(Map.of(
                         "ok", true,
-                        "messageCount", snapshotMessages.size(),
+                        "messageCount", this.messages.size(),
                         "toolCallCount", input.tools() != null ? input.tools().size() : 1
                 ));
                 emitEvent(runFinished, eventHandler);
