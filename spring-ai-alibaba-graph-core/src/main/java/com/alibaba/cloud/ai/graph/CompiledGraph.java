@@ -52,6 +52,8 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.stream.Collectors.toList;
 
+import com.alibaba.cloud.ai.dashscope.event.event.*;
+
 /**
  * The type Compiled graph.
  */
@@ -100,6 +102,25 @@ public class CompiledGraph {
 	 * The Compile config.
 	 */
 	public final CompileConfig compileConfig;
+	
+	/**
+	 * 事件回调管理器
+	 */
+	private CallbackManager callbackManager;
+
+	/**
+	 * 设置事件回调管理器
+	 */
+	public void setCallbackManager(CallbackManager callbackManager) {
+		this.callbackManager = callbackManager;
+	}
+
+	/**
+	 * 获取事件回调管理器
+	 */
+	public CallbackManager getCallbackManager() {
+		return this.callbackManager;
+	}
 
 	private static String INTERRUPT_AFTER = "__INTERRUPTED__";
 
@@ -829,6 +850,18 @@ public class CompiledGraph {
 		private CompletableFuture<Data<Output>> evaluateAction(AsyncNodeActionWithConfig action,
 				OverAllState withState) {
 			try {
+				// 发送步骤开始事件
+				if (callbackManager != null) {
+					try {
+						StepStartedEvent event = new StepStartedEvent();
+						event.setStepId(cursor.currentNodeId());
+						event.setStepName(cursor.currentNodeId());
+						callbackManager.onStepStartedEvent(event);
+					} catch (Exception ex) {
+						log.error("Error sending step started event: {}", ex.getMessage());
+					}
+				}
+				
 				doListeners(NODE_BEFORE, null);
 				return action.apply(withState, config).thenApply(updateState -> {
 					try {
@@ -868,7 +901,21 @@ public class CompiledGraph {
 					catch (Exception e) {
 						throw new CompletionException(e);
 					}
-				}).whenComplete((outputData, throwable) -> doListeners(NODE_AFTER, null));
+				}).whenComplete((outputData, throwable) -> {
+					// 发送步骤完成事件
+					if (callbackManager != null) {
+						try {
+							StepFinishedEvent event = new StepFinishedEvent();
+							event.setStepId(cursor.currentNodeId());
+							event.setStepName(cursor.currentNodeId());
+							callbackManager.onStepFinishedEvent(event);
+						} catch (Exception ex) {
+							log.error("Error sending step finished event: {}", ex.getMessage());
+						}
+					}
+					
+					doListeners(NODE_AFTER, null);
+				});
 			}
 			catch (Exception e) {
 				return failedFuture(e);
@@ -1016,6 +1063,30 @@ public class CompiledGraph {
 
 		private void doListeners(String scene, Exception e) {
 			Deque<GraphLifecycleListener> listeners = new LinkedBlockingDeque<>(compileConfig.lifecycleListeners());
+			
+			// 发送 AGUI 生命周期事件
+			if (callbackManager != null) {
+				try {
+					if (START.equals(scene)) {
+						RunStartedEvent event = new RunStartedEvent();
+						event.setRunId(config.checkPointId().orElse("unknown"));
+						event.setThreadId(config.threadId().orElse("unknown"));
+						callbackManager.onRunStartedEvent(event);
+					} else if (END.equals(scene)) {
+						RunFinishedEvent event = new RunFinishedEvent();
+						event.setRunId(config.checkPointId().orElse("unknown"));
+						event.setThreadId(config.threadId().orElse("unknown"));
+						callbackManager.onRunFinishedEvent(event);
+					} else if (ERROR.equals(scene)) {
+						RunErrorEvent event = new RunErrorEvent();
+						event.setError(e != null ? e.getMessage() : "Unknown error");
+						callbackManager.onRunErrorEvent(event);
+					}
+				} catch (Exception ex) {
+					log.error("Error sending AGUI lifecycle event: {}", ex.getMessage());
+				}
+			}
+			
 			LifeListenerUtil.processListenersLIFO(this.cursor.currentNodeId(), listeners, this.currentState,
 					this.config, scene, e);
 		}
