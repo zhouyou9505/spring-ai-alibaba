@@ -16,10 +16,10 @@ package com.alibaba.cloud.ai.graph.event.message;
  * system components.
  * </p>
  *
- * @see com.alibaba.cloud.ai.dashscope.event.message.BaseMessage
+ * @see BaseMessage
  * @author Pascal Wilbrink
  */
-public class SystemMessage extends com.alibaba.cloud.ai.dashscope.event.message.BaseMessage {
+public class SystemMessage extends BaseMessage {
 
 	/**
 	 * Returns the role of this message as "system".

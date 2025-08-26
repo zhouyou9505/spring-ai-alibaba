@@ -15,10 +15,10 @@ package com.alibaba.cloud.ai.graph.event.message;
  * communicate their needs, ask questions, or request actions from the system.
  * </p>
  *
- * @see com.alibaba.cloud.ai.dashscope.event.message.BaseMessage
+ * @see BaseMessage
  * @author Pascal Wilbrink
  */
-public class UserMessage extends com.alibaba.cloud.ai.dashscope.event.message.BaseMessage {
+public class UserMessage extends BaseMessage {
 
 	/**
 	 * Returns the role of this message as "user".

@@ -16,15 +16,15 @@ import java.util.Objects;
  * </p>
  * <p>
  * Assistant messages can contain both textual content (inherited from
- * {@link com.alibaba.cloud.ai.dashscope.event.message.BaseMessage}) and a list of tool calls that represent actions the assistant
+ * {@link BaseMessage}) and a list of tool calls that represent actions the assistant
  * wants to perform or has performed.
  * </p>
  *
- * @see com.alibaba.cloud.ai.dashscope.event.message.BaseMessage
+ * @see BaseMessage
  * @see ToolCall
  * @author Pascal Wilbrink
  */
-public class AssistantMessage extends com.alibaba.cloud.ai.dashscope.event.message.BaseMessage {
+public class AssistantMessage extends BaseMessage {
 
 	private List<ToolCall> toolCalls = new ArrayList<>();
 

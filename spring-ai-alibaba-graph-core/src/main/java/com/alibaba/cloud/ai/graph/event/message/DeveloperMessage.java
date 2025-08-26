@@ -15,10 +15,10 @@ package com.alibaba.cloud.ai.graph.event.message;
  * or system processing.
  * </p>
  *
- * @see com.alibaba.cloud.ai.dashscope.event.message.BaseMessage
+ * @see BaseMessage
  * @author Pascal Wilbrink
  */
-public class DeveloperMessage extends com.alibaba.cloud.ai.dashscope.event.message.BaseMessage {
+public class DeveloperMessage extends BaseMessage {
 
 	/**
 	 * Returns the role of this message as "developer".

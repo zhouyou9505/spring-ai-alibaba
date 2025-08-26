@@ -20,7 +20,6 @@ import com.alibaba.cloud.ai.graph.event.manager.CallbackManagerImpl;
 import com.alibaba.cloud.ai.graph.event.agent.RunAgentInput;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
-import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.event.manager.EventHandler;
 import com.alibaba.cloud.ai.graph.event.message.BaseMessage;
 import com.alibaba.cloud.ai.graph.event.tool.Tool;
@@ -31,7 +30,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.ai.chat.model.ChatModel;
@@ -49,7 +47,6 @@ import java.util.concurrent.CompletableFuture;
 @RequiredArgsConstructor
 public class AguiStreamController {
     
-    private final ObjectMapper objectMapper;
     private final ChatModel chatModel; // 注入 ChatModel
     
     // 使用 ThreadLocal 存储当前会话的 SseEmitter
@@ -99,8 +96,6 @@ public class AguiStreamController {
             if (emitter == null) {
                 return;
             }
-
-            // 通过 SseEmitter 发送事件给前端
             try {
                 emitter.send(SseEmitter.event()
                         .name(event.getClass().getSimpleName())

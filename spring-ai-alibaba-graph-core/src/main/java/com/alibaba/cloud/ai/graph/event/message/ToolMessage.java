@@ -15,11 +15,11 @@ package com.alibaba.cloud.ai.graph.event.message;
  * tool execution feedback within the system.
  * </p>
  *
- * @see com.alibaba.cloud.ai.dashscope.event.message.BaseMessage
+ * @see BaseMessage
  * @see io.workm8.agui4j.core.tool.ToolCall
  * @author Pascal Wilbrink
  */
-public class ToolMessage extends com.alibaba.cloud.ai.dashscope.event.message.BaseMessage {
+public class ToolMessage extends BaseMessage {
 
 	private String toolCallId;
 
