@@ -89,40 +89,9 @@ public class AguiStreamController {
         // 创建 ReactAgent - 学习 ReactAgentHookTest.java 的完整初始化方式
         ReactAgent agent = ReactAgent.builder()
             .name("agui_stream_agent")
-            .model(chatModel) // 设置 ChatModel，参考 ReactAgentHookTest.java
+            .model(chatModel)
             .inputKey("llm_input_messages") // 设置输入键
-            .tools(toolCallbacks) // 设置转换后的工具
-            .preLlmHook(state -> {
-                // 在 LLM 调用前的钩子，可以修改系统提示词
-                if (!state.value("messages").isPresent()) {
-                    return Map.of();
-                }
-                
-                // 获取消息列表
-                var messages = state.value("messages").orElseThrow();
-                
-                // 消息裁剪功能 - 参考 ReactAgentHookTest.java
-                if (messages instanceof List && ((List<?>) messages).size() > 20) {
-                    List<?> messageList = (List<?>) messages;
-                    List<?> last20Messages = messageList.subList(messageList.size() - 20, messageList.size());
-                    messages = last20Messages;
-                }
-                
-                // 更新状态，准备 LLM 输入
-                state.updateState(Map.of("llm_input_messages", messages));
-                return Map.of();
-            })
-            .postLlmHook(state -> {
-                // 在 LLM 调用后的钩子，处理 LLM 响应
-                // 这里可以添加响应处理逻辑
-                return Map.of();
-            })
-            .postToolHook(state -> {
-                // 在工具调用后的钩子，更新消息状态
-                var messages = state.value("messages").orElse(List.of());
-                state.updateState(Map.of("llm_input_messages", messages));
-                return Map.of();
-            })
+            .tools(toolCallbacks)
             .build();
 
         // 创建回调管理器，传入 EventHandler 实例
@@ -152,19 +121,13 @@ public class AguiStreamController {
             try {
                 // 构建输入参数 - 按照 ReactAgentHookTest.java 的方式
                 Map<String, Object> graphInputs = new HashMap<>();
-                graphInputs.put("messages", springMessages); // 使用转换后的 Spring AI messages
+                graphInputs.put("llm_input_messages", springMessages); // 使用转换后的 Spring AI messages
                 graphInputs.put("threadId", input.threadId());
                 graphInputs.put("runId", input.runId());
                 graphInputs.put("tools", input.tools());
                 graphInputs.put("context", input.context());
-                
-                // 构建运行配置
-                RunnableConfig config = RunnableConfig.builder()
-                    .threadId(input.threadId())
-                    .build();
-                
-                // 执行图，事件会通过 CallbackManager 自动发送
-                graph.invoke(graphInputs, config);
+
+                agent.invoke(graphInputs);
                 
             } catch (Exception e) {
                 try {
