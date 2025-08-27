@@ -21,7 +21,11 @@ package com.alibaba.cloud.ai.graph.event.message;
  */
 public class SystemMessage extends BaseMessage {
 
-	/**
+    public SystemMessage(String id, String content, String name) {
+        super(id, content, name);
+    }
+
+    /**
 	 * Returns the role of this message as "system".
 	 * <p>
 	 * This implementation fulfills the abstract contract from {@link BaseMessage} and

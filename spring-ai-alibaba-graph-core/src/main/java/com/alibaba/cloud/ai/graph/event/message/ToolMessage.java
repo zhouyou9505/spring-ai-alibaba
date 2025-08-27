@@ -16,12 +16,18 @@ package com.alibaba.cloud.ai.graph.event.message;
  * </p>
  *
  * @see BaseMessage
- * @see io.workm8.agui4j.core.tool.ToolCall
  * @author Pascal Wilbrink
  */
 public class ToolMessage extends BaseMessage {
 
-	private String toolCallId;
+
+    public ToolMessage(String id, String content, String name, String toolCallId, String error) {
+        super(id, content, name);
+        this.toolCallId = toolCallId;
+        this.error = error;
+    }
+
+    private String toolCallId;
 
 	private String error;
 

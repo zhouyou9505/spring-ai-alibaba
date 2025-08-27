@@ -42,11 +42,10 @@ public class InterceptorConfig implements WebMvcConfigurer {
 	public void addInterceptors(InterceptorRegistry registry) {
 		registry.addInterceptor(tokenAuthInterceptor)
 			.addPathPatterns("/console/v1/**")
-			.excludePathPatterns("/console/v1/auth/login", "/console/v1/auth/refresh-token", "/console/v1/system/**")
+			.excludePathPatterns("/console/v1/auth/login", "/console/v1/auth/refresh-token", "/console/v1/system/**","/api/v1/**")
 			.excludePathPatterns("/swagger-ui/**", "/v3/api-docs/**")
 			.excludePathPatterns("/test/**");
 
-		registry.addInterceptor(apiKeyAuthInterceptor).addPathPatterns("/api/v1/**");
 	}
 
 }

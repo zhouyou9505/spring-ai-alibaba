@@ -1,7 +1,6 @@
 package com.alibaba.cloud.ai.graph.event.manager;
 
 
-import com.alibaba.cloud.ai.graph.event.event.BaseEvent;
 import com.alibaba.cloud.ai.graph.event.event.CustomEvent;
 import com.alibaba.cloud.ai.graph.event.event.MessagesSnapshotEvent;
 import com.alibaba.cloud.ai.graph.event.event.RawEvent;

@@ -52,6 +52,7 @@ import static java.lang.String.format;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 import com.alibaba.cloud.ai.graph.event.event.*;
 
@@ -851,19 +852,6 @@ public class CompiledGraph {
 		private CompletableFuture<Data<Output>> evaluateAction(AsyncNodeActionWithConfig action,
 				OverAllState withState) {
 			try {
-				// 发送步骤开始事件
-				if (callbackManager != null) {
-					try {
-						StepStartedEvent event = new StepStartedEvent();
-						event.setStepId(cursor.currentNodeId());
-						event.setStepName(cursor.currentNodeId());
-						callbackManager.onStepStartedEvent(event);
-					}
-					catch (Exception ex) {
-						log.error("Error sending step started event: {}", ex.getMessage());
-					}
-				}
-
 				doListeners(NODE_BEFORE, null);
 				return action.apply(withState, config).thenApply(updateState -> {
 					try {
@@ -904,20 +892,7 @@ public class CompiledGraph {
 						throw new CompletionException(e);
 					}
 				}).whenComplete((outputData, throwable) -> {
-					// 发送步骤完成事件
-					if (callbackManager != null) {
-						try {
-							StepFinishedEvent event = new StepFinishedEvent();
-							event.setStepId(cursor.currentNodeId());
-							event.setStepName(cursor.currentNodeId());
-							callbackManager.onStepFinishedEvent(event);
-						}
-						catch (Exception ex) {
-							log.error("Error sending step finished event: {}", ex.getMessage());
-						}
-					}
-
-					doListeners(NODE_AFTER, null);
+					doListeners(NODE_AFTER, throwable);
 				});
 			}
 			catch (Exception e) {
@@ -1064,7 +1039,7 @@ public class CompiledGraph {
 			}
 		}
 
-		private void doListeners(String scene, Exception e) {
+		private void doListeners(String scene, Throwable e) {
 			Deque<GraphLifecycleListener> listeners = new LinkedBlockingDeque<>(compileConfig.lifecycleListeners());
 
 			// 发送 AGUI 生命周期事件
@@ -1086,8 +1061,18 @@ public class CompiledGraph {
 						RunErrorEvent event = new RunErrorEvent();
 						event.setError(e != null ? e.getMessage() : "Unknown error");
 						callbackManager.onRunErrorEvent(event);
-					}
-				}
+					}else if (NODE_BEFORE.equals(scene)){
+                        StepStartedEvent event = new StepStartedEvent();
+                        event.setStepId(cursor.currentNodeId());
+                        event.setStepName(cursor.currentNodeId());
+                        callbackManager.onStepStartedEvent(event);
+                    } else if (NODE_AFTER.equals(scene)) {
+                        StepFinishedEvent event = new StepFinishedEvent();
+                        event.setStepId(cursor.currentNodeId());
+                        event.setStepName(cursor.currentNodeId());
+                        callbackManager.onStepFinishedEvent(event);
+                    }
+                }
 				catch (Exception ex) {
 					log.error("Error sending AGUI lifecycle event: {}", ex.getMessage());
 				}

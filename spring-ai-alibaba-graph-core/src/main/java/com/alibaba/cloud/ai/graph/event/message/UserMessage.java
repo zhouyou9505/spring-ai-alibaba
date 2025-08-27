@@ -21,6 +21,16 @@ package com.alibaba.cloud.ai.graph.event.message;
 public class UserMessage extends BaseMessage {
 
 	/**
+	 * Creates a new UserMessage with the specified identifier, content, and name.
+	 * @param id the unique identifier for this message
+	 * @param content the content/text of the message
+	 * @param name the name associated with this message
+	 */
+	public UserMessage(String id, String content, String name) {
+		super(id, content, name);
+	}
+
+	/**
 	 * Returns the role of this message as "user".
 	 * <p>
 	 * This implementation fulfills the abstract contract from {@link BaseMessage} and

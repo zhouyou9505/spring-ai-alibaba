@@ -3,7 +3,7 @@ services:
     container_name: mysql
     restart: always
     image: mysql:8.0.35
-    user: "${UID}:${GID}"
+    
     env_file:
       - ./.env
       - ./mysql.env
@@ -24,7 +24,7 @@ services:
     restart: always
     image: redis:7.2.5
     container_name: redis
-    user: "${UID}:${GID}"
+    
     env_file:
       - ./.env
     ports:
@@ -38,7 +38,7 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.17.2
     container_name: elasticsearch
-    user: "1000:1000"
+    
     restart: always
     volumes:
       - ${MIDDLEWARE_HOME:-.}/elasticsearch/data:/usr/share/elasticsearch/data
@@ -53,7 +53,7 @@ services:
   kibana:
     image: docker.elastic.co/kibana/kibana:8.17.2
     container_name: kibana
-    user: "1000:1000"
+    
     restart: always
     volumes:
       - ${MIDDLEWARE_HOME:-.}/kibana/data:/usr/share/kibana/data
@@ -73,7 +73,7 @@ services:
   rmq_namesrv:
     image: apache/rocketmq:5.3.2
     container_name: rmq_namesrv
-    user: "${UID}:${GID}"
+    
     restart: always
     env_file:
       - ./.env
@@ -93,7 +93,7 @@ services:
   rmq_broker:
     image: apache/rocketmq:5.3.2
     container_name: rmq_broker
-    user: "${UID}:${GID}"
+    
     restart: always
     env_file:
       - ./.env
@@ -119,7 +119,7 @@ services:
   rmq_proxy:
     image: apache/rocketmq:5.3.2
     container_name: rmq_proxy
-    user: "${UID}:${GID}"
+    
     restart: always
     env_file:
       - ./.env
@@ -140,7 +140,7 @@ services:
   nacos:
     image: nacos/nacos-server:latest
     container_name: nacos-standalone-derby
-    user: "${UID}:${GID}"
+    
     profiles:
       - nacos
     env_file:
@@ -162,7 +162,7 @@ services:
   init-topic:
     image: apache/rocketmq:5.3.2
     container_name: rmq-init-topic
-    user: "${UID}:${GID}"
+    
     restart: "no"
     env_file:
       - ./.env

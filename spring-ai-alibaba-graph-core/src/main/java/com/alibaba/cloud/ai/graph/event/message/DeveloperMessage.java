@@ -20,7 +20,11 @@ package com.alibaba.cloud.ai.graph.event.message;
  */
 public class DeveloperMessage extends BaseMessage {
 
-	/**
+    public DeveloperMessage(String id, String content, String name) {
+        super(id, content, name);
+    }
+
+    /**
 	 * Returns the role of this message as "developer".
 	 * <p>
 	 * This implementation fulfills the abstract contract from {@link BaseMessage} and

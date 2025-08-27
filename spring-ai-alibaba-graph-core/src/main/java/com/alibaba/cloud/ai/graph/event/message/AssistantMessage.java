@@ -26,7 +26,13 @@ import java.util.Objects;
  */
 public class AssistantMessage extends BaseMessage {
 
-	private List<ToolCall> toolCalls = new ArrayList<>();
+
+    public AssistantMessage(String id, String content, String name, List<ToolCall> toolCalls) {
+        super(id, content, name);
+        this.toolCalls = toolCalls;
+    }
+
+    private List<ToolCall> toolCalls = new ArrayList<>();
 
 	/**
 	 * Returns the role of this message as "assistant".
