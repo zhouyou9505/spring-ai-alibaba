@@ -33,6 +33,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.support.ToolCallbacks;
+import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -106,15 +108,6 @@ public class AguiStreamController {
         // 转换 messages 从 RunAgentInput 到 ReactAgent 认可的 Spring AI Message 格式
         List<org.springframework.ai.chat.messages.AbstractMessage> springMessages
                 = convertMessagesToSpringMessages(input.messages());
-
-        // 创建 ReactAgent - 学习 ReactAgentHookTest.java 的完整初始化方式
-        ReactAgent agent = ReactAgent.builder()
-                .name("agui_stream_agent")
-                .model(chatModel)
-                .inputKey("llm_input_messages") // 设置输入键
-                .tools(toolCallbacks)
-                .build();
-
         // 创建回调管理器，传入 EventHandler 实例
         CallbackManager callbackManager = new CallbackManagerImpl(new EventHandler(event -> {
             if (emitter == null) {
@@ -129,6 +122,16 @@ public class AguiStreamController {
                 throw new RuntimeException(e);
             }
         }));
+
+
+        // 创建 ReactAgent - 学习 ReactAgentHookTest.java 的完整初始化方式
+        ReactAgent agent = ReactAgent.builder()
+                .name("agui_stream_agent")
+                .model(chatModel)
+                .inputKey("llm_input_messages") // 设置输入键
+                .tools(toolCallbacks)
+                .callManager(callbackManager)
+                .build();
 
         // 获取 CompiledGraph 并设置回调管理器
         CompiledGraph graph = agent.getAndCompileGraph();
@@ -187,7 +190,8 @@ public class AguiStreamController {
 
             toolCallbacks.add(toolCallback);
         }
-
+        ToolCallback weatherToolCallback = ToolCallbacks.from(new WeatherTool())[0];
+        toolCallbacks.add(weatherToolCallback);
         return toolCallbacks;
     }
 
@@ -331,8 +335,14 @@ public class AguiStreamController {
                 message = new com.alibaba.cloud.ai.graph.event.message.UserMessage(id, content, "");
                 break;
             case "assistant":
-                message = new com.alibaba.cloud.ai.graph.event.message.AssistantMessage(id, content, "",
-                        JSON.parseArray(msgObj.getJSONArray("toolCall").toJSONString(), ToolCall.class));
+                List<com.alibaba.cloud.ai.graph.event.tool.ToolCall> toolCalls = new ArrayList<>();
+                if (msgObj.containsKey("toolCalls") && msgObj.getJSONArray("toolCalls") != null) {
+                    com.alibaba.fastjson.JSONArray toolCallsArray = msgObj.getJSONArray("toolCalls");
+                    if (!toolCallsArray.isEmpty()) {
+                        toolCalls = JSON.parseArray(toolCallsArray.toJSONString(), ToolCall.class);
+                    }
+                }
+                message = new com.alibaba.cloud.ai.graph.event.message.AssistantMessage(id, content, "", toolCalls);
                 break;
             case "system":
                 message = new com.alibaba.cloud.ai.graph.event.message.SystemMessage(id, content, "");
@@ -356,4 +366,18 @@ public class AguiStreamController {
     }
 
 
+
+    /**
+     * 天气工具类，用于演示工具的实际调用
+     */
+    public static class WeatherTool {
+
+        @org.springframework.ai.tool.annotation.Tool(name = "weather_tool", description = "获取指定城市的天气信息")
+        public String getWeather(@ToolParam(description = "城市名称") String city,
+                                 @ToolParam(description = "当前时间戳") String currentTimestamp) {
+            System.out.println("==TOOL被调用==");
+            return String.format("{\"city\": \"%s\", \"temperature\": -50, \"time\": \"%s\"}", city, currentTimestamp);
+        }
+
+    }
 }

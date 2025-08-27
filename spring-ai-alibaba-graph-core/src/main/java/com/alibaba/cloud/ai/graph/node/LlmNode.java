@@ -18,6 +18,12 @@ package com.alibaba.cloud.ai.graph.node;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.alibaba.cloud.ai.graph.streaming.StreamingChatGenerator;
+import com.alibaba.cloud.ai.graph.event.event.TextMessageStartEvent;
+import com.alibaba.cloud.ai.graph.event.event.TextMessageContentEvent;
+import com.alibaba.cloud.ai.graph.event.event.TextMessageEndEvent;
+import com.alibaba.cloud.ai.graph.event.manager.CallbackManager;
+import com.alibaba.cloud.ai.graph.event.manager.CallbackManagerImpl;
+import com.alibaba.cloud.ai.graph.event.manager.EventHandler;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.messages.Message;
@@ -34,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 public class LlmNode implements NodeAction {
 
@@ -64,12 +71,14 @@ public class LlmNode implements NodeAction {
 	private ChatClient chatClient;
 
 	private Boolean stream = Boolean.FALSE;
+	
+	private CallbackManager callbackManager;
 
 	public LlmNode() {
 	}
 
 	public LlmNode(String systemPrompt, String prompt, Map<String, Object> params, List<Message> messages,
-			List<Advisor> advisors, List<ToolCallback> toolCallbacks, ChatClient chatClient, boolean stream) {
+			List<Advisor> advisors, List<ToolCallback> toolCallbacks, ChatClient chatClient, boolean stream, CallbackManager callbackManager) {
 		this.systemPrompt = systemPrompt;
 		this.userPrompt = prompt;
 		this.params = params;
@@ -78,6 +87,7 @@ public class LlmNode implements NodeAction {
 		this.toolCallbacks = toolCallbacks;
 		this.chatClient = chatClient;
 		this.stream = stream;
+		this.callbackManager = callbackManager;
 	}
 
 	@Override
@@ -96,7 +106,26 @@ public class LlmNode implements NodeAction {
 			return Map.of(StringUtils.hasLength(this.outputKey) ? this.outputKey : "messages", generator);
 		}
 		else {
+			String messageId = UUID.randomUUID().toString();
+			if (callbackManager != null) {
+				TextMessageStartEvent startEvent = new TextMessageStartEvent();
+				startEvent.setMessageId(messageId);
+				startEvent.setRole("assistant");
+				callbackManager.onTextMessageStartEvent(startEvent);
+			}
+
 			ChatResponse response = call();
+
+			if (callbackManager != null) {
+				TextMessageContentEvent contentEvent = new TextMessageContentEvent();
+				contentEvent.setMessageId(messageId);
+				contentEvent.setDelta(response.getResult().getOutput().getText());
+				callbackManager.onTextMessageContentEvent(contentEvent);
+
+				TextMessageEndEvent endEvent = new TextMessageEndEvent();
+				endEvent.setMessageId(messageId);
+				callbackManager.onTextMessageEndEvent(endEvent);
+			}
 
 			Map<String, Object> updatedState = new HashMap<>();
 			updatedState.put("messages", response.getResult().getOutput());
@@ -107,6 +136,14 @@ public class LlmNode implements NodeAction {
 		}
 	}
 
+	private String generateMessageId() {
+		return "msg_" + System.currentTimeMillis() + "_" + Thread.currentThread().getId();
+	}
+	
+	public void setCallbackManager(CallbackManager callbackManager) {
+		this.callbackManager = callbackManager;
+	}
+	
 	private void initNodeWithState(OverAllState state) {
 		if (StringUtils.hasLength(userPromptKey)) {
 			this.userPrompt = (String) state.value(userPromptKey).orElse(this.userPrompt);
@@ -211,6 +248,8 @@ public class LlmNode implements NodeAction {
 		private List<ToolCallback> toolCallbacks;
 
 		private Boolean stream;
+		
+		private CallbackManager callbackManager;
 
 		public Builder userPromptTemplate(String userPromptTemplate) {
 			this.userPromptTemplate = userPromptTemplate;
@@ -276,6 +315,11 @@ public class LlmNode implements NodeAction {
 			this.stream = stream;
 			return this;
 		}
+		
+		public Builder callbackManager(CallbackManager callbackManager) {
+			this.callbackManager = callbackManager;
+			return this;
+		}
 
 		public LlmNode build() {
 			LlmNode llmNode = new LlmNode();
@@ -287,6 +331,7 @@ public class LlmNode implements NodeAction {
 			llmNode.messagesKey = this.messagesKey;
 			llmNode.outputKey = this.outputKey;
 			llmNode.stream = this.stream;
+			llmNode.callbackManager = this.callbackManager;
 			if (this.params != null) {
 				llmNode.params = this.params;
 			}

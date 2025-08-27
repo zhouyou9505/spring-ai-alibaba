@@ -27,6 +27,7 @@ import com.alibaba.cloud.ai.graph.KeyStrategy;
 import com.alibaba.cloud.ai.graph.KeyStrategyFactory;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.StateGraph;
+import com.alibaba.cloud.ai.graph.event.manager.CallbackManager;
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.action.AsyncNodeAction;
@@ -85,6 +86,8 @@ public class ReactAgent extends BaseAgent {
 
 	private String inputKey;
 
+    private CallbackManager callbackManager;
+
 	protected ReactAgent(LlmNode llmNode, ToolNode toolNode, Builder builder) throws GraphStateException {
 		this.name = builder.name;
 		this.description = builder.description;
@@ -100,7 +103,7 @@ public class ReactAgent extends BaseAgent {
 		this.preToolHook = builder.preToolHook;
 		this.postToolHook = builder.postToolHook;
 		this.inputKey = builder.inputKey;
-
+        this.callbackManager = builder.callbackManager;
 		// 初始化graph
 		this.graph = initGraph();
 	}
@@ -359,6 +362,8 @@ public class ReactAgent extends BaseAgent {
 
 		private String inputKey = "messages";
 
+        private CallbackManager callbackManager;
+
 		public Builder name(String name) {
 			this.name = name;
 			return this;
@@ -449,6 +454,11 @@ public class ReactAgent extends BaseAgent {
 			return this;
 		}
 
+        public Builder callManager(CallbackManager callbackManager) {
+            this.callbackManager = callbackManager;
+            return this;
+        }
+
 		public ReactAgent build() throws GraphStateException {
 			if (chatClient == null) {
 				if (model == null) {
@@ -464,7 +474,7 @@ public class ReactAgent extends BaseAgent {
 				chatClient = clientBuilder.build();
 			}
 
-			LlmNode.Builder llmNodeBuilder = LlmNode.builder().chatClient(chatClient).messagesKey(this.inputKey);
+			LlmNode.Builder llmNodeBuilder = LlmNode.builder().chatClient(chatClient).callbackManager(callbackManager).messagesKey(this.inputKey);
 			if (CollectionUtils.isNotEmpty(tools)) {
 				llmNodeBuilder.toolCallbacks(tools);
 			}
@@ -484,7 +494,8 @@ public class ReactAgent extends BaseAgent {
 			return new ReactAgent(llmNode, toolNode, this);
 		}
 
-	}
+
+    }
 
 	public static class SubGraphNodeAdapter implements NodeAction {
 

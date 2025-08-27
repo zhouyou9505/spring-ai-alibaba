@@ -39,7 +39,7 @@ spring:
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://192.168.144.15:3306/agentscope?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://172.19.176.1:3306/agentscope?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
     username: agentscope
     password: agentscope
     druid:
@@ -67,7 +67,7 @@ spring:
 
   data:
     redis:
-      host: 192.168.144.15
+      host: 172.19.176.1
       port: 6379
       database: 0
 
@@ -76,7 +76,7 @@ spring:
     connection-timeout: 10000
 
 rocketmq:
-  endpoints: 192.168.144.15:18080
+  endpoints: 172.19.176.1:18080
   document-index-topic: topic_saa_studio_document_index
   document_index_group: group_saa_studio_document_index
 
@@ -88,4 +88,4 @@ oauth2:
   github:
     client-id: ${GITHUB_CLIENT_ID}
     client-secret: ${GITHUB_CLIENT_SECRET}
-    redirect-uri: http://192.168.144.15:8080/oauth2/callback/github
+    redirect-uri: http://172.19.176.1:8080/oauth2/callback/github
