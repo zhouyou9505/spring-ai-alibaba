@@ -24,6 +24,7 @@ import com.alibaba.cloud.ai.graph.event.event.TextMessageEndEvent;
 import com.alibaba.cloud.ai.graph.event.manager.CallbackManager;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.PromptTemplate;
@@ -69,7 +70,7 @@ public class LlmNode implements NodeAction {
 	private ChatClient chatClient;
 
 	private Boolean stream = Boolean.FALSE;
-	
+
 	private CallbackManager callbackManager;
 
 	public LlmNode() {
@@ -94,71 +95,64 @@ public class LlmNode implements NodeAction {
 
 		// add streaming support
 		if (Boolean.TRUE.equals(stream)) {
-			Flux<ChatResponse> chatResponseFlux = stream();
+
+            String messageId = UUID.randomUUID().toString();
+            if (callbackManager != null) {
+                TextMessageStartEvent startEvent = new TextMessageStartEvent();
+                startEvent.setMessageId(messageId);
+                startEvent.setRole("assistant");
+                callbackManager.onTextMessageStartEvent(startEvent);
+            }
+
+
+            Flux<ChatResponse> chatResponseFlux = stream();
 			var generator = StreamingChatGenerator.builder()
 				.startingNode("llmNode")
 				.startingState(state)
 				.mapResult(response -> Map.of(StringUtils.hasLength(this.outputKey) ? this.outputKey : "messages",
 						Objects.requireNonNull(response.getResult().getOutput())))
 				.build(chatResponseFlux);
+
+            if (callbackManager != null) {
+                TextMessageContentEvent contentEvent = new TextMessageContentEvent();
+                contentEvent.setMessageId(messageId);
+                contentEvent.setDelta(delta);
+                callbackManager.onTextMessageContentEvent(contentEvent);
+            }
+
+            if (callbackManager != null) {
+                TextMessageEndEvent endEvent = new TextMessageEndEvent();
+                endEvent.setMessageId(messageId);
+                callbackManager.onTextMessageEndEvent(endEvent);
+            }
+
 			return Map.of(StringUtils.hasLength(this.outputKey) ? this.outputKey : "messages", generator);
 		}
 		else {
-			String messageId = UUID.randomUUID().toString();
-			if (callbackManager != null) {
-				TextMessageStartEvent startEvent = new TextMessageStartEvent();
-				startEvent.setMessageId(messageId);
-				startEvent.setRole("assistant");
-				callbackManager.onTextMessageStartEvent(startEvent);
+
+			AssistantMessage responseOutput;
+			try {
+				ChatResponse response = call();
+				responseOutput = response.getResult().getOutput();
+			}
+			catch (Exception e) {
+				responseOutput = new AssistantMessage("Exception: " + e.getMessage());
 			}
 
-			StringBuilder contentBuilder = new StringBuilder();
-            Flux<ChatResponse> chatResponseFlux = stream();
-			
-			final ChatResponse[] finalResponse = new ChatResponse[1];
-			
-			chatResponseFlux.doOnNext(chatResponse -> {
-				finalResponse[0] = chatResponse;
-				
-				if (chatResponse.getResult() != null && chatResponse.getResult().getOutput() != null) {
-					String delta = chatResponse.getResult().getOutput().getText();
-					if (delta != null) {
-						contentBuilder.append(delta);
-						
-						if (callbackManager != null) {
-							TextMessageContentEvent contentEvent = new TextMessageContentEvent();
-							contentEvent.setMessageId(messageId);
-							contentEvent.setDelta(delta);
-							callbackManager.onTextMessageContentEvent(contentEvent);
-						}
-					}
-				}
-			})
-			.doOnComplete(() -> {
-				if (callbackManager != null) {
-					TextMessageEndEvent endEvent = new TextMessageEndEvent();
-					endEvent.setMessageId(messageId);
-					callbackManager.onTextMessageEndEvent(endEvent);
-				}
-			})
-			.blockLast();
-			
-			ChatResponse response = finalResponse[0];
-
 			Map<String, Object> updatedState = new HashMap<>();
-			updatedState.put("messages", response.getResult().getOutput());
+			updatedState.put("messages", responseOutput);
 			if (StringUtils.hasLength(this.outputKey)) {
-				updatedState.put(this.outputKey, response.getResult().getOutput());
+				updatedState.put(this.outputKey, responseOutput);
 			}
 			return updatedState;
 		}
 	}
 
-	
+
 	public void setCallbackManager(CallbackManager callbackManager) {
 		this.callbackManager = callbackManager;
 	}
-	
+
 	private void initNodeWithState(OverAllState state) {
 		if (StringUtils.hasLength(userPromptKey)) {
 			this.userPrompt = (String) state.value(userPromptKey).orElse(this.userPrompt);
@@ -263,7 +257,7 @@ public class LlmNode implements NodeAction {
 		private List<ToolCallback> toolCallbacks;
 
 		private Boolean stream;
-		
+
 		private CallbackManager callbackManager;
 
 		public Builder userPromptTemplate(String userPromptTemplate) {
@@ -330,7 +324,7 @@ public class LlmNode implements NodeAction {
 			this.stream = stream;
 			return this;
 		}
-		
+
 		public Builder callbackManager(CallbackManager callbackManager) {
 			this.callbackManager = callbackManager;
 			return this;
