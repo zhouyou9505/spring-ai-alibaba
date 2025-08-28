@@ -25,6 +25,10 @@ import com.alibaba.cloud.ai.graph.event.event.AgentFinishedEvent;
 import com.alibaba.cloud.ai.graph.event.manager.CallbackManager;
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
+import com.alibaba.cloud.ai.graph.scheduling.ScheduleConfig;
+import com.alibaba.cloud.ai.graph.scheduling.ScheduledAgentTask;
+
+import org.springframework.scheduling.Trigger;
 
 /**
  * Abstract base class for all agents in the graph system. Contains common properties and
@@ -131,11 +135,11 @@ public abstract class BaseAgent {
 			throws GraphStateException, GraphRunnerException {
 		// 发送Agent开始事件
 		emitAgentStartEvent();
-		
+
 		try {
 			// 调用子类的具体实现
 			Optional<OverAllState> result = doInvoke(input);
-			
+
 			// 发送Agent成功结束事件
 			emitAgentFinishedEvent(null);
 			return result;
@@ -155,4 +159,25 @@ public abstract class BaseAgent {
 	 */
 	protected abstract Optional<OverAllState> doInvoke(Map<String, Object> input)
 			throws GraphStateException, GraphRunnerException;
+
+	/**
+	 * Schedule the agent task with trigger.
+	 * @param trigger the schedule configuration
+	 * @param input the agent input
+	 * @return a ScheduledAgentTask instance for managing the scheduled task
+	 */
+	public ScheduledAgentTask schedule(Trigger trigger, Map<String, Object> input)
+			throws GraphStateException, GraphRunnerException {
+		ScheduleConfig scheduleConfig = ScheduleConfig.builder().trigger(trigger).inputs(input).build();
+		return schedule(scheduleConfig);
+	}
+
+	/**
+	 * Schedule the agent task with trigger.
+	 * @param scheduleConfig the schedule configuration
+	 * @return a ScheduledAgentTask instance for managing the scheduled task
+	 */
+	public abstract ScheduledAgentTask schedule(ScheduleConfig scheduleConfig)
+			throws GraphStateException, GraphRunnerException;
+
 }

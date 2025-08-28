@@ -34,6 +34,8 @@ import com.alibaba.cloud.ai.graph.action.AsyncNodeAction;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.alibaba.cloud.ai.graph.node.LlmNode;
 import com.alibaba.cloud.ai.graph.node.ToolNode;
+import com.alibaba.cloud.ai.graph.scheduling.ScheduleConfig;
+import com.alibaba.cloud.ai.graph.scheduling.ScheduledAgentTask;
 import com.alibaba.cloud.ai.graph.state.strategy.AppendStrategy;
 import org.apache.commons.collections4.CollectionUtils;
 
@@ -109,6 +111,12 @@ public class ReactAgent extends BaseAgent {
 			this.compiledGraph = getAndCompileGraph();
 		}
 		return this.compiledGraph.invoke(input);
+	}
+
+	@Override
+	public ScheduledAgentTask schedule(ScheduleConfig scheduleConfig) throws GraphStateException {
+		CompiledGraph compiledGraph = getAndCompileGraph();
+		return compiledGraph.schedule(scheduleConfig);
 	}
 
 	public StateGraph getStateGraph() {
@@ -471,7 +479,10 @@ public class ReactAgent extends BaseAgent {
 			}
 
 			LlmNode.Builder llmNodeBuilder = LlmNode.builder().chatClient(chatClient).callbackManager(callbackManager).messagesKey(this.inputKey);
-			if (CollectionUtils.isNotEmpty(tools)) {
+            if (outputKey != null && !outputKey.isEmpty()) {
+                llmNodeBuilder.outputKey(outputKey);
+            }
+            if (CollectionUtils.isNotEmpty(tools)) {
 				llmNodeBuilder.toolCallbacks(tools);
 			}
 			LlmNode llmNode = llmNodeBuilder.build();
