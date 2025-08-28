@@ -149,7 +149,10 @@ export default defineConfig({
     },
   ],
   clickToComponent: {},
-  tailwindcss: {},
+  tailwindcss: {
+    config: './tailwind.config.js',
+    css: './tailwind.css',
+  },
   esbuildMinifyIIFE: true,
   mfsu: false,
   plugins: ['@umijs/plugins/dist/tailwindcss'],
