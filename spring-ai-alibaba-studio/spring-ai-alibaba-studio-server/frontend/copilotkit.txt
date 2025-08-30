@@ -1,0 +1,422 @@
+Custom Sub-Components
+You can swap out any of the sub-components of any Copilot UI to build up a completely custom look and feel. All components are fully typed with TypeScript for better development experience.
+
+Component	Description
+UserMessage	Message component for user messages
+AssistantMessage	Message component for assistant messages
+Window	Contains the chat
+Button	Button that opens/closes the chat
+Header	The header of the chat
+Messages	The chat messages area
+Suggestions	Customize how suggestions are displayed
+Input	The chat input
+Actions	Customize how actions (tools) are displayed
+Agent State	Customize how agent state messages are displayed
+UserMessage
+The user message is what displays when the user sends a message to the chat. In this example, we change the color and add an avatar.
+
+
+Code
+The main thing to be aware of here is the message prop, which is the message text from the user.
+
+
+import { UserMessageProps } from "@copilotkit/react-ui";
+import { CopilotKit } from "@copilotkit/react-core";
+import { CopilotSidebar } from "@copilotkit/react-ui";
+import "@copilotkit/react-ui/styles.css";
+const CustomUserMessage = (props: UserMessageProps) => {
+  const wrapperStyles = "flex items-center gap-2 justify-end mb-4";
+  const messageStyles = "bg-blue-500 text-white py-2 px-4 rounded-xl break-words flex-shrink-0 max-w-[80%]";
+  const avatarStyles = "bg-blue-500 shadow-sm min-h-10 min-w-10 rounded-full text-white flex items-center justify-center";
+  return (
+    <div className={wrapperStyles}>
+      <div className={messageStyles}>{props.message}</div>
+      <div className={avatarStyles}>TS</div>
+    </div>
+  );
+};
+<CopilotKit>
+  <CopilotSidebar UserMessage={CustomUserMessage} />
+</CopilotKit>
+AssistantMessage
+The assistant message is what displays when the LLM responds to a user message. In this example, we remove the background color and add an avatar.
+
+
+Code
+
+import { AssistantMessageProps } from "@copilotkit/react-ui";
+import { useChatContext } from "@copilotkit/react-ui";
+import { Markdown } from "@copilotkit/react-ui";
+import { SparklesIcon } from "@heroicons/react/24/outline";
+import { CopilotKit } from "@copilotkit/react-core";
+import { CopilotSidebar } from "@copilotkit/react-ui";
+import "@copilotkit/react-ui/styles.css";
+const CustomAssistantMessage = (props: AssistantMessageProps) => {
+  const { icons } = useChatContext();
+  const { message, isLoading, subComponent } = props;
+  const avatarStyles = "bg-zinc-400 border-zinc-500 shadow-lg min-h-10 min-w-10 rounded-full text-white flex items-center justify-center";
+  const messageStyles = "px-4 rounded-xl pt-2";
+  const avatar = <div className={avatarStyles}><SparklesIcon className="h-6 w-6" /></div>
+  return (
+    <div className="py-2">
+      <div className="flex items-start">
+        {!subComponent && avatar}
+        <div className={messageStyles}>
+          {message && <Markdown content={message || ""} /> }
+          {isLoading && icons.spinnerIcon}
+        </div>
+      </div>
+      <div className="my-2">{subComponent}</div>
+    </div>
+  );
+};
+<CopilotKit>
+  <CopilotSidebar AssistantMessage={CustomAssistantMessage} />
+</CopilotKit>
+Key concepts
+
+subComponent - This is where any generative UI will be rendered.
+message - This is the message text from the LLM, typically in markdown format.
+isLoading - This is a boolean that indicates if the message is still loading.
+Window
+The window is the main container for the chat. In this example, we turn it into a more traditional modal.
+
+
+Code
+
+import { WindowProps, useChatContext, CopilotSidebar } from "@copilotkit/react-ui";
+import { CopilotKit } from "@copilotkit/react-core";
+import "@copilotkit/react-ui/styles.css";
+function Window({ children }: WindowProps) {
+  const { open, setOpen } = useChatContext();
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      onClick={() => setOpen(false)}
+    >
+      <div
+        className="bg-white rounded-lg shadow-xl max-w-2xl w-full h-[80vh] overflow-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex flex-col h-full">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+<CopilotKit>
+  <CopilotSidebar Window={Window} />
+</CopilotKit>
+Button
+The CopilotSidebar and CopilotPopup components allow you to customize their trigger button by passing in a custom Button component.
+
+
+Code
+
+import { ButtonProps, useChatContext, CopilotSidebar } from "@copilotkit/react-ui";
+import { CopilotKit } from "@copilotkit/react-core";
+import "@copilotkit/react-ui/styles.css";
+function Button({}: ButtonProps) {
+  const { open, setOpen } = useChatContext();
+  const wrapperStyles = "w-24 bg-blue-500 text-white p-4 rounded-lg text-center cursor-pointer";
+  return (
+    <div onClick={() => setOpen(!open)} className={wrapperStyles}>
+      <button
+        className={`${open ? "open" : ""}`}
+        aria-label={open ? "Close Chat" : "Open Chat"}
+      >
+        Ask AI
+      </button>
+    </div>
+  );
+};
+<CopilotKit>
+  <CopilotSidebar Button={Button} />
+</CopilotKit>
+Header
+The header component is the top of the chat window. In this example, we add a button to the left of the title with a custom icon.
+
+
+Code
+
+Messages
+The Messages component handles the display and organization of different message types in the chat interface. Its complexity comes from managing various message types (text, actions, results, and agent states) and maintaining proper scroll behavior.
+
+
+Code
+
+Suggestions
+The suggestions component allows you to customize how suggestions are displayed. In this example, we add a label to the list and change the suggestion chip look
+
+
+Code
+
+Input
+The input component that the user interacts with to send messages to the chat. In this example, we customize it to have a custom "Ask" button and placeholder text.
+
+
+Code
+
+Actions
+Actions allow the LLM to interact with your application's functionality. When an action is called by the LLM, you can provide custom components to visualize its execution and results. This example demonstrates a calendar meeting card implementation.
+
+
+Code
+
+"use client" // only necessary if you are using Next.js with the App Router.
+import { useCopilotAction } from "@copilotkit/react-core";
+
+export function YourComponent() {
+  useCopilotAction({
+    name: "showCalendarMeeting",
+    description: "Displays calendar meeting information",
+    parameters: [
+      {
+        name: "date",
+        type: "string",
+        description: "Meeting date (YYYY-MM-DD)",
+        required: true
+      },
+      {
+        name: "time",
+        type: "string",
+        description: "Meeting time (HH:mm)",
+        required: true
+      },
+      {
+        name: "meetingName",
+        type: "string",
+        description: "Name of the meeting",
+        required: false
+      }
+    ],
+    render: ({ status, args }) => {
+      const { date, time, meetingName } = args;
+
+      if (status === 'inProgress') {
+        return <LoadingView />; // Your own component for loading state
+      } else {
+        const meetingProps: CalendarMeetingCardProps = {
+          date: date,
+          time,
+          meetingName
+        };
+        return <CalendarMeetingCardComponent {...meetingProps} />;
+      }
+    },
+  });
+
+  return (
+    <>...</>
+  );
+}
+Agent State
+The Agent State component allows you to visualize the internal state and progress of your CoAgents. When working with CoAgents, you can provide a custom component to render the agent's state. This example demonstrates a progress bar that updates as the agent runs.
+
+Not started with CoAgents yet?
+
+If you haven't gotten started with CoAgents yet, you can get started in 10 minutes with the quickstart guide.
+
+Code
+
+"use client"; // only necessary if you are using Next.js with the App Router.
+
+import { useCoAgentStateRender } from "@copilotkit/react-core";
+import { Progress } from "./progress";
+type AgentState = {
+  logs: string[];
+}
+useCoAgentStateRender<AgentState>({
+  name: "basic_agent",
+  render: ({ state, nodeName, status }) => {
+    if (!state.logs || state.logs.length === 0) {
+      return null;
+    }
+    // Progress is a component we are omitting from this example for brevity.
+    return <Progress logs={state.logs} />;
+  },
+});
+
+==================================
+
+Prebuilt Copilot UI
+Explore the built-in UI components that come with CopilotKit
+
+Getting started
+Import the default styles
+Import the default styles in your root component (typically layout.tsx) :
+
+
+import "@copilotkit/react-ui/styles.css";
+Choose your component
+CopilotKit ships with a number of highly flexible components that will scale to your needs. Choose whichever one you like, they functionally are they same but have different layouts.
+```code
+import { CopilotChat, CopilotSidebar, CopilotPopup } from "@copilotkit/react-ui";
+import { useCopilotChatHeadless_components } from "@copilotkit/react-core";
+
+return <div>
+  <CopilotChat />
+  <CopilotSidebar />
+  <CopilotPopup />
+</div>
+```
+
+===============================
+Styling Copilot UI
+CopilotKit has a variety of ways to customize colors and structures of the Copilot UI components.
+
+CSS Variables
+Custom CSS
+Custom Icons
+Custom Labels
+If you want to customize the style as well as the functionality of the Copilot UI, you can also try the following:
+
+Custom Sub-Components
+Fully Headless UI
+CSS Variables (Easiest)
+The easiest way to change the colors using in the Copilot UI components is to override CopilotKit CSS variables.
+
+Hover over the interactive UI elements below to see the available CSS variables.
+
+CopilotKit
+
+Hi you! 👋 I can help you create a presentation on any topic.
+Hello CopilotKit!
+Type a message...
+
+
+Powered by CopilotKit
+
+Once you've found the right variable, you can import CopilotKitCSSProperties and simply wrap CopilotKit in a div and override the CSS variables.
+
+
+import { CopilotKitCSSProperties } from "@copilotkit/react-ui";
+<div
+  style={
+    {
+      "--copilot-kit-primary-color": "#222222",
+    } as CopilotKitCSSProperties
+  }
+>
+  <CopilotSidebar .../>
+</div>
+Reference
+CSS Variable	Description
+--copilot-kit-primary-color	Main brand/action color - used for buttons, interactive elements
+--copilot-kit-contrast-color	Color that contrasts with primary - used for text on primary elements
+--copilot-kit-background-color	Main page/container background color
+--copilot-kit-secondary-color	Secondary background - used for cards, panels, elevated surfaces
+--copilot-kit-secondary-contrast-color	Primary text color for main content
+--copilot-kit-separator-color	Border color for dividers and containers
+--copilot-kit-muted-color	Muted color for disabled/inactive states
+Custom CSS
+In addition to customizing the colors, the CopilotKit CSS is structured to easily allow customization via CSS classes.
+
+globals.css
+
+.copilotKitButton {
+  border-radius: 0;
+}
+.copilotKitMessages {
+  padding: 2rem;
+}
+.copilotKitUserMessage {
+  background: #007AFF;
+}
+Reference
+For a full list of styles and classes used in CopilotKit, click here.
+
+CSS Class	Description
+.copilotKitMessages	Main container for all chat messages with scroll behavior and spacing
+.copilotKitInput	Text input container with typing area and send button
+.copilotKitUserMessage	Styling for user messages including background, text color and bubble shape
+.copilotKitAssistantMessage	Styling for AI responses including background, text color and bubble shape
+.copilotKitHeader	Top bar of chat window containing title and controls
+.copilotKitButton	Primary chat toggle button with hover and active states
+.copilotKitWindow	Root container defining overall chat window dimensions and position
+.copilotKitMarkdown	Styles for rendered markdown content including lists, links and quotes
+.copilotKitCodeBlock	Code snippet container with syntax highlighting and copy button
+.copilotKitChat	Base chat layout container handling positioning and dimensions
+.copilotKitSidebar	Styles for sidebar chat mode including width and animations
+.copilotKitPopup	Styles for popup chat mode including position and animations
+.copilotKitButtonIcon	Icon styling within the main chat toggle button
+.copilotKitButtonIconOpen .copilotKitButtonIconClose	Icon states for when chat is open/closed
+.copilotKitCodeBlockToolbar	Top bar of code blocks with language and copy controls
+.copilotKitCodeBlockToolbarLanguage	Language label styling in code block toolbar
+.copilotKitCodeBlockToolbarButtons	Container for code block action buttons
+.copilotKitCodeBlockToolbarButton	Individual button styling in code block toolbar
+.copilotKitSidebarContentWrapper	Inner container for sidebar mode content
+.copilotKitInputControls	Container for input area buttons and controls
+.copilotKitActivityDot1 .copilotKitActivityDot2 .copilotKitActivityDot3	Animated typing indicator dots
+.copilotKitDevConsole	Development debugging console container
+.copilotKitDevConsoleWarnOutdated	Warning styles for outdated dev console
+.copilotKitVersionInfo	Version information display styles
+.copilotKitDebugMenuButton	Debug menu toggle button styling
+.copilotKitDebugMenu	Debug options menu container
+.copilotKitDebugMenuItem	Individual debug menu option styling
+Custom Fonts
+You can customize the fonts by updating the fontFamily property in the various CSS classes that are used in the CopilotKit.
+
+globals.css
+
+.copilotKitMessages {
+  font-family: "Arial, sans-serif";
+}
+.copilotKitInput {
+  font-family: "Arial, sans-serif";
+}
+Reference
+You can update the main content classes to change the font family for the various components.
+
+CSS Class	Description
+.copilotKitMessages	Main container for all messages
+.copilotKitInput	The input field
+.copilotKitMessage	Base styling for all chat messages
+.copilotKitUserMessage	User messages
+.copilotKitAssistantMessage	AI responses
+Custom Icons
+You can customize the icons by passing the icons property to the CopilotSidebar, CopilotPopup or CopilotChat component.
+
+
+<CopilotChat
+  icons={{
+    // Use your own icons here – any React nodes
+    openIcon: <YourOpenIconComponent />,
+    closeIcon: <YourCloseIconComponent />,
+  }}
+/>
+Reference
+Icon	Description
+openIcon	The icon to use for the open chat button
+closeIcon	The icon to use for the close chat button
+headerCloseIcon	The icon to use for the close chat button in the header
+sendIcon	The icon to use for the send button
+activityIcon	The icon to use for the activity indicator
+spinnerIcon	The icon to use for the spinner
+stopIcon	The icon to use for the stop button
+regenerateIcon	The icon to use for the regenerate button
+pushToTalkIcon	The icon to use for push to talk
+Custom Labels
+To customize labels, pass the labels property to the CopilotSidebar, CopilotPopup or CopilotChat component.
+
+
+<CopilotChat
+  labels={{
+    initial: "Hello! How can I help you today?",
+    title: "My Copilot",
+    placeholder: "Ask me anything!",
+    stopGenerating: "Stop",
+    regenerateResponse: "Regenerate",
+  }}
+/>
+Reference
+Label	Description
+initial	The initial message(s) to display in the chat window
+title	The title to display in the header
+placeholder	The placeholder to display in the input
+stopGenerating	The label to display on the stop button
+regenerateResponse	The label to display on the regenerate button
+
+
