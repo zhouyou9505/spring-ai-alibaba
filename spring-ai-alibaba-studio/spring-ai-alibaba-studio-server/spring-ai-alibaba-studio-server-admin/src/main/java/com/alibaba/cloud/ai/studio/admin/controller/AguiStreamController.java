@@ -89,7 +89,7 @@ public class AguiStreamController {
     @RequestMapping(path = {"/**"}, method = {RequestMethod.GET, RequestMethod.POST})
     @Operation(summary = "MCP CopilotKit Universal Handler", 
             description = "Handles all MCP-compliant CopilotKit requests")
-    public ResponseEntity<?> handleCopilotKitMCPRequest(
+    public Object handleCopilotKitMCPRequest(
             HttpServletRequest request, 
             HttpServletResponse response,
             @RequestBody(required = false) String requestBody) throws Exception {
@@ -161,15 +161,8 @@ public class AguiStreamController {
     public ResponseEntity<Map<String, Object>> getInfo() {
         return handleMCPInfo();
     }
-    
-    /**
-     * Agent state endpoint - POST /agents/{agentName}/state  
-     */
-    @PostMapping(path = "/agents/{agentName}/state", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get Agent State", description = "Returns agent state information")
-    public ResponseEntity<Map<String, Object>> getAgentState(@PathVariable String agentName, @RequestBody(required = false) String requestBody) {
-        return handleMCPAgentState(agentName, requestBody);
-    }
+
+
     private SseEmitter handleLegacyCopilotKitRequest(String inputStr, HttpServletResponse response) throws Exception {
 
         // 设置响应头
@@ -350,13 +343,12 @@ public class AguiStreamController {
     /**
      * MCP Agent Execution Handler - POST /agents/{agent}
      */
-    private ResponseEntity<?> handleMCPAgentExecution(String agentName, String requestBody, HttpServletResponse response) throws Exception {
+    private Object handleMCPAgentExecution(String agentName, String requestBody, HttpServletResponse response) throws Exception {
         log.info("Executing agent: {} with request: {}", agentName, requestBody);
         
         if ("ai_researcher".equals(agentName)) {
-            // Handle streaming response for ai_researcher agent
-            SseEmitter emitter = handleLegacyCopilotKitRequest(requestBody, response);
-            return ResponseEntity.ok().contentType(MediaType.TEXT_EVENT_STREAM).body(emitter);
+            // Handle streaming response for ai_researcher agent - return SseEmitter directly
+            return handleLegacyCopilotKitRequest(requestBody, response);
         } else {
             Map<String, Object> error = new HashMap<>();
             error.put("error", "Agent not found");
@@ -467,44 +459,7 @@ public class AguiStreamController {
         
         return ResponseEntity.ok(v1Response);
     }
-    
-    /**
-     * Test endpoint to verify backend connectivity
-     */
-    @GetMapping(path = "/test-connectivity", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Object>> testConnectivity() {
-        Map<String, Object> testResponse = new HashMap<>();
-        testResponse.put("status", "backend_online");
-        testResponse.put("service", "CopilotKit MCP Controller");
-        testResponse.put("timestamp", new java.util.Date().toString());
-        testResponse.put("endpoints", List.of(
-            "/copilotkit/agents/execute",
-            "/copilotkit/info",
-            "/copilotkit/health",
-            "/copilotkit/agents/ai_researcher/state"
-        ));
-        
-        log.info("Backend connectivity test successful");
-        return ResponseEntity.ok(testResponse);
-    }
-    
-    /**
-     * Test agents/execute endpoint specifically
-     */
-    @PostMapping(path = "/test-agents-execute", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Object>> testAgentsExecute(@RequestBody(required = false) String requestBody) {
-        Map<String, Object> testResponse = new HashMap<>();
-        testResponse.put("status", "agents_execute_endpoint_accessible");
-        testResponse.put("endpoint", "/copilotkit/agents/execute");
-        testResponse.put("method", "POST");
-        testResponse.put("requestReceived", requestBody != null ? "yes" : "no");
-        testResponse.put("timestamp", new java.util.Date().toString());
-        
-        log.info("Test agents/execute endpoint called with body: {}", requestBody);
-        return ResponseEntity.ok(testResponse);
-    }
 
-    
     /**
      * Health check endpoint
      */
