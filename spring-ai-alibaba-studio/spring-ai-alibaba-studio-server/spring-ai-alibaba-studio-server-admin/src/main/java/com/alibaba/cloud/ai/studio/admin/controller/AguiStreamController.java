@@ -106,9 +106,11 @@ public class AguiStreamController {
         if (path.matches(INFO_PATTERN)) {
             return handleMCPInfo();
         } else if (path.matches(AGENTS_EXECUTE_PATTERN)) {
-            // Return SSE emitter directly for streaming
+            // Return SseEmitter wrapped in ResponseEntity for SSE streaming
             SseEmitter emitter = handleMCPAgentsExecute(requestBody, response);
-            return ResponseEntity.ok().contentType(MediaType.TEXT_EVENT_STREAM).body(emitter);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_EVENT_STREAM)
+                    .body(emitter);
         } else if (path.matches(AGENT_PATTERN)) {
             String agentName = extractAgentName(path);
             return handleMCPAgentExecution(agentName, requestBody, response);
@@ -119,9 +121,11 @@ public class AguiStreamController {
             String actionName = extractActionName(path);
             return handleMCPActionExecution(actionName, requestBody);
         } else if (path.isEmpty() || path.equals("/")) {
-            // Handle legacy copilotkit requests - streaming response
+            // Handle legacy copilotkit requests - SSE streaming response
             SseEmitter emitter = handleLegacyCopilotKitRequest(requestBody, response);
-            return ResponseEntity.ok().contentType(MediaType.TEXT_EVENT_STREAM).body(emitter);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_EVENT_STREAM)
+                    .body(emitter);
         } else {
             // Handle v1 endpoints for backward compatibility
             return handleMCPV1Endpoints(path, method, requestBody, response);
@@ -136,9 +140,10 @@ public class AguiStreamController {
         log.info("Executing agents with request: {}", requestBody);
         
         setCorsHeaders(response);
+        response.setContentType("text/event-stream");
         
         // This is the primary agent execution endpoint for CopilotKit
-        // Use streaming response for real-time interaction
+        // Use SSE streaming response following AG-UI pattern
         return handleLegacyCopilotKitRequest(requestBody, response);
     }
     
@@ -147,10 +152,13 @@ public class AguiStreamController {
      */
     @PostMapping(path = "/agents/execute", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "Execute CopilotKit Agents", description = "Main endpoint for CopilotKit agent execution")
-    public SseEmitter executeAgents(@RequestBody String requestBody, HttpServletResponse response) throws Exception {
+    public ResponseEntity<SseEmitter> executeAgents(@RequestBody String requestBody, HttpServletResponse response) throws Exception {
         log.info("Direct agents/execute call with body: {}", requestBody);
         setCorsHeaders(response);
-        return handleMCPAgentsExecute(requestBody, response);
+        SseEmitter emitter = handleMCPAgentsExecute(requestBody, response);
+        return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_EVENT_STREAM)
+                .body(emitter);
     }
     
     /**
@@ -165,102 +173,82 @@ public class AguiStreamController {
 
     private SseEmitter handleLegacyCopilotKitRequest(String inputStr, HttpServletResponse response) throws Exception {
 
-        // 设置响应头
+        // 设置响应头 - SSE format following AG-UI pattern
         response.setContentType("text/event-stream");
         response.setCharacterEncoding("UTF-8");
         setCorsHeaders(response);
         
         // 打印入参用于调试
         log.info("收到请求参数: {}", inputStr);
-        System.out.println("收到请求参数: " + inputStr);
 
-        // 解析JSON并转换字段映射
-        com.alibaba.fastjson.JSONObject jsonObject = JSON.parseObject(inputStr);
-
-        // 创建适配的RunAgentInput
-        RunAgentInput input = createAdaptedRunAgentInput(jsonObject);
-
-        // 创建 SseEmitter
-        SseEmitter emitter = new SseEmitter(0L); // 无超时
-        String threadId = input.threadId();
-
-        // 设置当前线程的 SseEmitter
-        currentEmitter.set(emitter);
-
-        // 设置 SseEmitter 的回调，清理 ThreadLocal
-        emitter.onCompletion(() -> {
-            currentEmitter.remove();
-        });
-
-        emitter.onError(throwable -> {
-            currentEmitter.remove();
-        });
-
-        emitter.onTimeout(() -> {
-            currentEmitter.remove();
-        });
-
-        // 转换 tools 从 RunAgentInput 到 ReactAgent 认可的 ToolCallback 格式
-        List<ToolCallback> toolCallbacks = convertToolsToToolCallbacks(input.tools());
-
-        // 转换 messages 从 RunAgentInput 到 ReactAgent 认可的 Spring AI Message 格式
-        List<org.springframework.ai.chat.messages.AbstractMessage> springMessages
-                = convertMessagesToSpringMessages(input.messages());
-        // 创建回调管理器，传入 EventHandler 实例
-        CallbackManager callbackManager = new CallbackManagerImpl(new EventHandler(event -> {
-            if (emitter == null) {
-                return;
-            }
-            try {
-                log.info(JSON.toJSONString(event));
-                emitter.send(SseEmitter.event()
-                        .name(event.getClass().getSimpleName())
-                        .data(event));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }));
-
-        // 创建 ReactAgent
-        ReactAgent agent = ReactAgent.builder()
-                .name("agui_stream_agent")
-                .model(chatModel)
-                .inputKey("llm_input_messages") // 设置输入键
-                .tools(toolCallbacks)
-                .callManager(callbackManager)
-                .build();
-
-        // 获取 CompiledGraph 并设置回调管理器
-        CompiledGraph graph = agent.getAndCompileGraph();
-        if (graph != null) {
-            graph.setCallbackManager(callbackManager);
-        }
-
-        // 异步启动 ReactAgent 执行
-        CompletableFuture.runAsync(() -> {
-            try {
-                // 构建输入参数
-                Map<String, Object> graphInputs = new HashMap<>();
-                graphInputs.put("llm_input_messages", springMessages);
-                graphInputs.put("threadId", input.threadId());
-                graphInputs.put("runId", input.runId());
-                graphInputs.put("tools", input.tools());
-                graphInputs.put("context", input.context());
-
-                agent.invoke(graphInputs);
-
-            } catch (Exception e) {
+        // 创建 SseEmitter with long timeout like AG-UI
+        SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
+        
+        try {
+            // 解析JSON并转换字段映射
+            com.alibaba.fastjson.JSONObject jsonObject = JSON.parseObject(inputStr);
+            RunAgentInput input = createAdaptedRunAgentInput(jsonObject);
+            
+            // 转换 tools 从 RunAgentInput 到 ReactAgent 认可的 ToolCallback 格式
+            List<ToolCallback> toolCallbacks = convertToolsToToolCallbacks(input.tools());
+            List<org.springframework.ai.chat.messages.AbstractMessage> springMessages
+                    = convertMessagesToSpringMessages(input.messages());
+            
+            // 创建回调管理器，传入 EventHandler 实例 - Following AG-UI pattern with space prefix
+            CallbackManager callbackManager = new CallbackManagerImpl(new EventHandler(event -> {
                 try {
+                    // AG-UI pattern: add space prefix and send as SSE data
+                    String jsonData = " " + JSON.toJSONString(event);
+                    emitter.send(SseEmitter.event().data(jsonData).build());
+                    log.info("SSE Event sent: {}", JSON.toJSONString(event));
+                } catch (IOException e) {
+                    log.error("Error sending SSE event", e);
                     emitter.completeWithError(e);
-                } catch (Exception ex) {
-                    // 静默处理
                 }
-            } finally {
-                // 确保清理 ThreadLocal
-                currentEmitter.remove();
-            }
-        });
+            }));
 
+            // 创建 ReactAgent
+            ReactAgent agent = ReactAgent.builder()
+                    .name("agui_stream_agent")
+                    .model(chatModel)
+                    .inputKey("llm_input_messages")
+                    .tools(toolCallbacks)
+                    .callManager(callbackManager)
+                    .build();
+
+            // 获取 CompiledGraph 并设置回调管理器
+            CompiledGraph graph = agent.getAndCompileGraph();
+            if (graph != null) {
+                graph.setCallbackManager(callbackManager);
+            }
+
+            // 异步执行 agent，仿照 AG-UI 模式
+            CompletableFuture.runAsync(() -> {
+                try {
+                    // 构建输入参数
+                    Map<String, Object> graphInputs = new HashMap<>();
+                    graphInputs.put("llm_input_messages", springMessages);
+                    graphInputs.put("threadId", input.threadId());
+                    graphInputs.put("runId", input.runId());
+                    graphInputs.put("tools", input.tools());
+                    graphInputs.put("context", input.context());
+
+                    agent.invoke(graphInputs);
+                    
+                    // Complete the emitter when done
+                    emitter.complete();
+                    
+                } catch (Exception e) {
+                    log.error("Error in agent execution", e);
+                    emitter.completeWithError(e);
+                }
+            });
+            
+        } catch (Exception e) {
+            log.error("Error in streaming response setup", e);
+            emitter.completeWithError(e);
+        }
+        
         return emitter;
     }
 
@@ -347,8 +335,11 @@ public class AguiStreamController {
         log.info("Executing agent: {} with request: {}", agentName, requestBody);
         
         if ("ai_researcher".equals(agentName)) {
-            // Handle streaming response for ai_researcher agent - return SseEmitter directly
-            return handleLegacyCopilotKitRequest(requestBody, response);
+            // Handle streaming response for ai_researcher agent - return SseEmitter wrapped in ResponseEntity
+            SseEmitter emitter = handleLegacyCopilotKitRequest(requestBody, response);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_EVENT_STREAM)
+                    .body(emitter);
         } else {
             Map<String, Object> error = new HashMap<>();
             error.put("error", "Agent not found");
