@@ -834,7 +834,7 @@ public class CompiledGraph {
 
 								currentState = OverAllState.updateState(intermediateState, (Map<String, Object>) data,
 										keyStrategyMap);
-								overAllState.updateState(intermediateState, (Map<String, Object>) data, keyStrategyMap);
+								this.overAllState.updateState(currentState);
 							}
 							else {
 								throw new IllegalArgumentException("Embedded generator must return a Map");
