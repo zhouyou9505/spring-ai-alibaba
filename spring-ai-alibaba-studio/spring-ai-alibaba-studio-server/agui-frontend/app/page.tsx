@@ -22,7 +22,7 @@ function Home() {
   const { useLgc } = useModelSelectorContext();
 
   return (
-      <CopilotKit runtimeUrl={useLgc ? "/api/copilotkit-lgc" : "/api/copilotkit"} agent="ai_researcher">
+      <CopilotKit runtimeUrl="/api/copilotkit">
         <ResearchProvider>
           <ResearchWrapper />
         </ResearchProvider>

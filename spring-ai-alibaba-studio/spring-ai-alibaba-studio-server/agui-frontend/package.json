@@ -4,9 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3000",
+    "dev:debug": "cross-env NODE_OPTIONS=--inspect next dev --port 3000",
+    "dev:debug:cmd": "set NODE_OPTIONS=--inspect && next dev --port 3000",
+    "dev:debug:ps": "$env:NODE_OPTIONS='--inspect'; next dev --port 3000",
+    "dev:verbose": "cross-env DEBUG=* next dev --port 3000",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "debug:backend": "curl -X POST http://localhost:8080/copilotkit/info"
   },
   "dependencies": {
     "@copilotkit/react-core": "1.8.13",
@@ -35,6 +41,7 @@
     "@types/node": "^22.0.0",
     "@types/react": "19.0.1",
     "@types/react-dom": "19.0.2",
+    "cross-env": "^7.0.3",
     "eslint": "^9.0.0",
     "eslint-config-next": "15.1.0",
     "postcss": "^8",

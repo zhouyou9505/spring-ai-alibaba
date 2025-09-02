@@ -1,32 +1,59 @@
 import { NextRequest } from "next/server";
 import {
   CopilotRuntime,
-  OpenAIAdapter,
   copilotRuntimeNextJSAppRouterEndpoint,
 } from "@copilotkit/runtime";
-import OpenAI from "openai";
+import { Langgraph4jAdapter } from "../lib/langgraph4j";
 
-// Agent Lock Mode Configuration
-// ServiceAdapter only used for peripherals (suggestions, etc.) since we have a dedicated agent
-const openai = new OpenAI();
-const serviceAdapter = new OpenAIAdapter({ openai } as any);
+// ServiceAdapter Architecture Configuration
+// Use Langgraph4jAdapter for direct backend communication
+const serviceAdapter = new Langgraph4jAdapter();
 
-// Runtime configured for Agent Lock Mode with our Spring Boot backend
-const runtime = new CopilotRuntime({
-  remoteEndpoints: [
-    {
-      url: process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/copilotkit` : "http://localhost:8080/copilotkit",
-    },
-  ],
-});
+// Runtime configured for ServiceAdapter mode
+const runtime = new CopilotRuntime({});
 
-// Agent Lock Mode endpoint - all requests will be handled by the ai_researcher agent
+// ServiceAdapter endpoint - direct communication with backend
 export const POST = async (req: NextRequest) => {
-  const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
-    runtime,
-    serviceAdapter, // Only for peripheral operations like suggestions
-    endpoint: "/api/copilotkit",
-  });
+  // Debug logging
+  if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+    console.log('[DEBUG] ServiceAdapter Request:', {
+      method: req.method,
+      url: req.url,
+      headers: Object.fromEntries(req.headers.entries()),
+      timestamp: new Date().toISOString()
+    });
+  }
 
-  return handleRequest(req);
+  try {
+    const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+      runtime,
+      serviceAdapter, // Direct ServiceAdapter communication
+      endpoint: "/api/copilotkit",
+    });
+
+    const response = await handleRequest(req);
+    
+    if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+      console.log('[DEBUG] ServiceAdapter Response:', {
+        status: response.status,
+        headers: Object.fromEntries(response.headers.entries()),
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    return response;
+  } catch (error) {
+    console.error('[ERROR] ServiceAdapter Error:', error);
+    return new Response(
+      JSON.stringify({
+        error: 'Internal Server Error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+  }
 };
