@@ -4,6 +4,7 @@ import {
   CopilotServiceAdapter 
 } from "@copilotkit/runtime";
 import { randomUUID } from "@copilotkit/shared";
+import { log } from "console";
 
 /**
  * Base interface for common properties in all server-sent events.
@@ -174,7 +175,7 @@ export class Langgraph4jAdapter implements CopilotServiceAdapter {
             }
 
             buffer += value;
-
+            log(`[${threadId}] 响应数据:`, value);
             // Split buffer by newlines and process complete messages
             const lines = buffer.split('\n');
             const lastLine = lines.pop(); // Keep the last incomplete line in buffer
@@ -205,75 +206,54 @@ export class Langgraph4jAdapter implements CopilotServiceAdapter {
             
             console.debug(`${threadId} - Fetched messages:`, messages);
             for (const message of messages) {
-              // Generate unique IDs if not provided to prevent null field errors
-              const messageId = message.message_id || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-              const toolCallId = message.tool_call_id || `tool_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-              
-              console.log(`[${threadId}] Processing message:`, {
-                type: message.type,
-                messageId: message.message_id,
-                delta: message.delta,
-                stepName: message.stepName,
-                threadId: message.threadId,
-                runId: message.runId
-              });
-              
               switch (message.type) {
                 case 'RUN_STARTED':
-                  console.log(`[${threadId}] Run started`);
-                  break;
-                case 'STEP_STARTED':
-                  console.log(`[${threadId}] Step started: ${message.stepName}`);
+                  
                   break;
                 case 'TEXT_MESSAGE_START':
                   eventStream$.sendTextMessageStart({
-                    messageId: messageId
+                    messageId: message.message_id
                   });
                   break;
                 case 'TEXT_MESSAGE_CONTENT':
-                  // Backend sends 'delta' field in TEXT_MESSAGE_CONTENT events
-                  const content = message.delta || message.content || '';
-                  console.log(`[${threadId}] Text content delta:`, content);
                   eventStream$.sendTextMessageContent({
-                    messageId: messageId,
-                    content: content,
+                    messageId: message.message_id,
+                    content: message.delta,
                   });
                   break;
                 case 'TEXT_MESSAGE_END':
                   eventStream$.sendTextMessageEnd({
-                    messageId: messageId,
+                    messageId: message.message_id,
                   });
                   break;
-                case 'STEP_FINISHED':
-                  console.log(`[${threadId}] Step finished: ${message.stepName}`);
-                  break;
                 case 'RUN_FINISHED':
-                  console.log(`[${threadId}] Run finished`);
                   fetchEvents = false;
                   break;
                 case 'TOOL_CALL_START':
                   eventStream$.sendActionExecutionStart({
-                    actionExecutionId: toolCallId,
-                    actionName: message.tool_call_name || 'unknown_tool',
+                    actionExecutionId: message.tool_call_id,
+                    actionName: message.tool_call_name,
                     parentMessageId: message.parent_message_id,
                   });
                   break;
                 case 'TOOL_CALL_ARGS':
                   eventStream$.sendActionExecutionArgs({
-                    actionExecutionId: toolCallId,
-                    args: message.tool_call_args || '',
+                    actionExecutionId: message.tool_call_id,
+                    args: message.tool_call_args,
                   });
                   break;
                 case 'TOOL_CALL_END':
                   eventStream$.sendActionExecutionEnd({
-                    actionExecutionId: toolCallId,
+                    actionExecutionId: message.tool_call_id,
                   });
+                  fetchEvents = false;
                   break;
                 default:
                   // Handle unexpected message types
-                  console.warn(`[${threadId}] Unexpected message type:`, message.type);
+                  console.error('Unexpected message type:', message);
                   break;
               }
+
             }
 
           }
