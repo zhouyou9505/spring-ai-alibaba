@@ -65,7 +65,7 @@ public class AguiStreamController {
     
     // MCP Standard Route Patterns
     private static final String AGENT_PATTERN = "^/agents/([^/]+)$";
-    private static final String AGENT_STATE_PATTERN = "^/agents/([^/]+)/state$";
+    private static final String AGENTS_STATE_PATTERN = "^/agents/state$";  // Updated to match CopilotKit MCP spec
     private static final String AGENTS_EXECUTE_PATTERN = "^/agents/execute$";
     private static final String ACTION_PATTERN = "^/actions/([^/]+)$";
     private static final String INFO_PATTERN = "^/info$";
@@ -84,7 +84,7 @@ public class AguiStreamController {
 
     /**
      * Universal MCP handler for all CopilotKit requests
-     * Handles: /info, /agents/{agent}, /agents/{agent}/state, /actions/{action}
+     * Handles: /info, /agents/{agent}, /agents/state, /agents/execute, /actions/{action}
      */
     @RequestMapping(path = {"/**"}, method = {RequestMethod.GET, RequestMethod.POST})
     @Operation(summary = "MCP CopilotKit Universal Handler", 
@@ -114,18 +114,14 @@ public class AguiStreamController {
         } else if (path.matches(AGENT_PATTERN)) {
             String agentName = extractAgentName(path);
             return handleMCPAgentExecution(agentName, requestBody, response);
-        } else if (path.matches(AGENT_STATE_PATTERN)) {
-            String agentName = extractAgentNameFromState(path);
-            return handleMCPAgentState(agentName, requestBody);
+        } else if (path.matches(AGENTS_STATE_PATTERN)) {
+            return handleMCPAgentsState(requestBody);
         } else if (path.matches(ACTION_PATTERN)) {
             String actionName = extractActionName(path);
             return handleMCPActionExecution(actionName, requestBody);
         } else if (path.isEmpty() || path.equals("/")) {
-            // Handle legacy copilotkit requests - SSE streaming response
-            SseEmitter emitter = handleLegacyCopilotKitRequest(requestBody, response);
-            return ResponseEntity.ok()
-                    .contentType(MediaType.TEXT_EVENT_STREAM)
-                    .body(emitter);
+            log.error("not route {}" ,path);
+            throw new RuntimeException();
         } else {
             // Handle v1 endpoints for backward compatibility
             return handleMCPV1Endpoints(path, method, requestBody, response);
@@ -161,6 +157,15 @@ public class AguiStreamController {
                 .body(emitter);
     }
     
+    /**
+     * Dedicated agents state endpoint - POST /agents/state
+     */
+    @PostMapping(path = "/agents/state", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get Agents State", description = "Returns agent state configuration per CopilotKit MCP standards")
+    public ResponseEntity<Map<String, Object>> getAgentsState(@RequestBody(required = false) String requestBody) {
+        return handleMCPAgentsState(requestBody);
+    }
+
     /**
      * Dedicated info endpoint - GET /info
      */
@@ -240,7 +245,9 @@ public class AguiStreamController {
                     
                 } catch (Exception e) {
                     log.error("Error in agent execution", e);
-                    emitter.completeWithError(e);
+//                    emitter.completeWithError(e);
+//
+
                 }
             });
             
@@ -350,46 +357,61 @@ public class AguiStreamController {
     }
     
     /**
-     * MCP Agent State Handler - GET/POST /agents/{agent}/state
+     * MCP Agents State Handler - POST /agents/state
+     * Returns agent state information per CopilotKit MCP standards
      */
-    private ResponseEntity<Map<String, Object>> handleMCPAgentState(String agentName, String requestBody) {
+    private ResponseEntity<Map<String, Object>> handleMCPAgentsState(String requestBody) {
         try {
-            log.info("Loading state for agent: {} with request: {}", agentName, requestBody);
+            log.info("Loading agents state with request: {}", requestBody);
             
             Map<String, Object> stateResponse = new HashMap<>();
             
-            // Parse request if present
+            // Parse request to extract threadId and agentName
             String threadId = "default-thread-" + System.currentTimeMillis();
+            String agentName = "ai_researcher"; // Default agent
+            
             if (requestBody != null && !requestBody.trim().isEmpty()) {
                 try {
                     com.alibaba.fastjson.JSONObject request = JSON.parseObject(requestBody);
                     String requestThreadId = request.getString("threadId");
+                    String requestAgentName = request.getString("name");
+                    
                     if (requestThreadId != null && !requestThreadId.trim().isEmpty()) {
                         threadId = requestThreadId;
                     }
+                    if (requestAgentName != null && !requestAgentName.trim().isEmpty()) {
+                        agentName = requestAgentName;
+                    }
                 } catch (Exception e) {
-                    log.warn("Failed to parse request body, using default threadId", e);
+                    log.warn("Failed to parse request body, using defaults", e);
                 }
             }
             
-            stateResponse.put("agentName", agentName);
+            // Build CopilotKit MCP-compliant state response
             stateResponse.put("threadId", threadId);
-            stateResponse.put("status", "active");
-            stateResponse.put("lastActivity", new java.util.Date().toString());
-            stateResponse.put("messages", new ArrayList<>());
-            stateResponse.put("tools", new ArrayList<>());
-            stateResponse.put("timestamp", new java.util.Date().toString());
+            stateResponse.put("threadExists", true);
+            stateResponse.put("state", JSON.toJSONString(Map.of(
+                "agentName", agentName,
+                "status", "active",
+                "lastActivity", new java.util.Date().toString(),
+                "mode", "agent_lock"
+            )));
+            stateResponse.put("messages", JSON.toJSONString(new ArrayList<>()));
+            
+            log.info("MCP Agents State Response: {}", JSON.toJSONString(stateResponse));
             
             return ResponseEntity.ok(stateResponse);
             
         } catch (Exception e) {
-            log.error("Error loading agent state for: " + agentName, e);
+            log.error("Error loading agents state", e);
             
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Failed to load agent state");
-            errorResponse.put("agentName", agentName);
+            errorResponse.put("error", "Failed to load agents state");
             errorResponse.put("message", e.getMessage());
             errorResponse.put("threadId", "error-thread-" + System.currentTimeMillis());
+            errorResponse.put("threadExists", false);
+            errorResponse.put("state", JSON.toJSONString(Map.of()));
+            errorResponse.put("messages", JSON.toJSONString(new ArrayList<>()));
             
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
@@ -482,15 +504,6 @@ public class AguiStreamController {
      */
     private String extractAgentName(String path) {
         java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(AGENT_PATTERN);
-        java.util.regex.Matcher matcher = pattern.matcher(path);
-        return matcher.matches() ? matcher.group(1) : "unknown";
-    }
-    
-    /**
-     * Extract agent name from state path
-     */
-    private String extractAgentNameFromState(String path) {
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(AGENT_STATE_PATTERN);
         java.util.regex.Matcher matcher = pattern.matcher(path);
         return matcher.matches() ? matcher.group(1) : "unknown";
     }
