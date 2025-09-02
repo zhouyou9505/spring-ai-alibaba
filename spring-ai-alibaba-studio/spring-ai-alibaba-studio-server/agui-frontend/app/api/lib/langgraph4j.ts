@@ -57,6 +57,24 @@ interface RunFinished extends BaseMessage {
 }
 
 /**
+ * Interface for the STEP_STARTED event, indicating the start of a step.
+ */
+interface StepStarted extends BaseMessage {
+  type: 'STEP_STARTED';
+  step_name: string;
+  step_id: string;
+}
+
+/**
+ * Interface for the STEP_FINISHED event, indicating the end of a step.
+ */
+interface StepFinished extends BaseMessage {
+  type: 'STEP_FINISHED';
+  step_name: string;
+  step_id: string;
+}
+
+/**
  * Interface for the TOOL_CALL_START event, indicating the start of a tool call.
  */
 interface ToolCallStart extends BaseMessage {
@@ -86,7 +104,7 @@ interface ToolCallArgs extends BaseMessage {
 /**
  * Union type for all possible server-sent event message types from the LangGraph4j backend.
  */
-type Message = RunStarted | TextMessageStart | TextMessageContent | TextMessageEnd | RunFinished | ToolCallStart | ToolCallEnd | ToolCallArgs;
+type Message = RunStarted | StepStarted | TextMessageStart | TextMessageContent | TextMessageEnd | StepFinished | RunFinished | ToolCallStart | ToolCallEnd | ToolCallArgs;
 
 /**
  * Implements the `CopilotServiceAdapter` to connect CopilotKit with a LangGraph4j backend.
@@ -176,43 +194,52 @@ export class Langgraph4jAdapter implements CopilotServiceAdapter {
 
             buffer += value;
             log(`[${threadId}] 响应数据:`, value);
-            // Split buffer by newlines and process complete messages
-            const lines = buffer.split('\n');
-            const lastLine = lines.pop(); // Keep the last incomplete line in buffer
-
-            const regex = /^data:(.+)$/m;
-
-            const messages: Message[] = lines.map(line => line.match(regex))
-              .filter(match => match !== null)
-              .map(match => JSON.parse(match![1])) // Non-null assertion since we filtered nulls
-              ;
+            log(`[${threadId}] 响应数据buffer:`, buffer);
             
-            if( lastLine ) {
-              const m = lastLine.match(regex);
-              if (m) {
-                try {
-                  messages.push(JSON.parse(m[1]));
-                  buffer = ''; // Clear buffer
-                } catch (error) {
-                  buffer = lastLine; // Keep the last line in buffer for next iteration
-                  console.warn("fetch is incomplete. LastLine :", lastLine);
+            // Process SSE events - handle the actual format from logs
+            const messages: Message[] = [];
+            
+            // Split by newlines to process each line
+            const lines = buffer.split('\n');
+            let remainingBuffer = '';
+            
+            // Process all lines except the last one (which might be incomplete)
+            for (let i = 0; i < lines.length - 1; i++) {
+              const line = lines[i];
+              
+              if (line.startsWith('data:')) {
+                const jsonData = line.substring(5); // Remove 'data:' prefix
+                
+                if (jsonData.trim()) {
+                  try {
+                    const parsed = JSON.parse(jsonData.trim());
+                    console.log(`[${threadId}] Successfully parsed SSE message:`, parsed);
+                    messages.push(parsed);
+                  } catch (e) {
+                    console.error(`[${threadId}] Failed to parse SSE JSON:`, jsonData, e);
+                  }
                 }
               }
             }
-            else {
-              buffer = ''; // Clear buffer if no last line
-            }
+            
+            // Keep the last line in buffer (might be incomplete)
+            buffer = lines[lines.length - 1] || '';
 
             
             console.debug(`${threadId} - Fetched messages:`, messages);
             for (const message of messages) {
+              log(`[${threadId}] single message:`, message);
               switch (message.type) {
                 case 'RUN_STARTED':
-                  
+                  console.log(`[${threadId}] Run started`);
+                  break;
+                case 'STEP_STARTED':
+                  console.log(`[${threadId}] Step started: ${('step_name' in message) ? message.step_name : 'unknown'}`);
                   break;
                 case 'TEXT_MESSAGE_START':
-                  eventStream$.sendTextMessageStart({
-                    messageId: message.message_id
+                   eventStream$.sendTextMessageContent({
+                    messageId: message.message_id,
+                    content: 'i哦阿姐送到附近哦啊事件的发生多久哦分',
                   });
                   break;
                 case 'TEXT_MESSAGE_CONTENT':
@@ -226,7 +253,11 @@ export class Langgraph4jAdapter implements CopilotServiceAdapter {
                     messageId: message.message_id,
                   });
                   break;
+                case 'STEP_FINISHED':
+                  console.log(`[${threadId}] Step finished: ${('step_name' in message) ? message.step_name : 'unknown'}`);
+                  break;
                 case 'RUN_FINISHED':
+                  console.log(`[${threadId}] Run finished`);
                   fetchEvents = false;
                   break;
                 case 'TOOL_CALL_START':
@@ -246,11 +277,10 @@ export class Langgraph4jAdapter implements CopilotServiceAdapter {
                   eventStream$.sendActionExecutionEnd({
                     actionExecutionId: message.tool_call_id,
                   });
-                  fetchEvents = false;
                   break;
                 default:
                   // Handle unexpected message types
-                  console.error('Unexpected message type:', message);
+                  console.warn(`[${threadId}] Unexpected message type:`, (message as any).type, message);
                   break;
               }
 
