@@ -15,6 +15,10 @@
  */
 package com.alibaba.cloud.ai.graph;
 
+import com.alibaba.cloud.ai.graph.action.AsyncNodeActionWithConfig;
+import com.alibaba.cloud.ai.graph.action.Command;
+import com.alibaba.cloud.ai.graph.action.InterruptableAction;
+import com.alibaba.cloud.ai.graph.action.InterruptionMetadata;
 import com.alibaba.cloud.ai.graph.action.AsyncCommandAction;
 import com.alibaba.cloud.ai.graph.action.AsyncNodeActionWithConfig;
 import com.alibaba.cloud.ai.graph.action.Command;
@@ -28,7 +32,6 @@ import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.exception.RunnableErrors;
 import com.alibaba.cloud.ai.graph.internal.edge.Edge;
 import com.alibaba.cloud.ai.graph.internal.edge.EdgeValue;
-import com.alibaba.cloud.ai.graph.internal.node.CommandNode;
 import com.alibaba.cloud.ai.graph.internal.node.ParallelNode;
 import com.alibaba.cloud.ai.graph.internal.node.SubCompiledGraphNodeAction;
 import com.alibaba.cloud.ai.graph.scheduling.ScheduleConfig;
@@ -857,17 +860,6 @@ public class CompiledGraph {
 				doListeners(NODE_BEFORE, null);
 				return action.apply(withState, config).thenApply(TryFunction.Try(updateState -> {
 					try {
-						if (action instanceof CommandNode.AsyncCommandNodeActionWithConfig) {
-							AsyncCommandAction commandAction = (AsyncCommandAction) updateState.get("command");
-							Command command = commandAction.apply(withState, config).join();
-
-							this.currentState = OverAllState.updateState(currentState, command.update(),
-									keyStrategyMap);
-							this.overAllState.updateState(command.update());
-							context.setNextNodeId(command.gotoNode());
-							return Data.of(getNodeOutput());
-						}
-
 						Optional<Data<Output>> embed = getEmbedGenerator(updateState);
 						if (embed.isPresent()) {
 							return embed.get();
@@ -1063,8 +1055,6 @@ public class CompiledGraph {
 
 		private void doListeners(String scene, Exception e) {
 			Deque<GraphLifecycleListener> listeners = new LinkedBlockingDeque<>(compileConfig.lifecycleListeners());
-			LifeListenerUtil.processListenersLIFO(this.context.currentNodeId(), listeners, this.currentState,
-
 			// Note: Lifecycle events (RunStarted, RunFinished, RunError) are now handled
 			// by AbstractAgent pattern instead of CompiledGraph to provide better
 			// separation of concerns and event management
@@ -1218,19 +1208,6 @@ record ProcessedNodesEdgesAndConfig(Nodes nodes, Edges edges, Set<String> interr
 			// Process nodes
 			//
 			processedSubGraphNodes.elements.stream().map(n -> {
-				if (n instanceof CommandNode commandNode) {
-					Map<String, String> mappings = commandNode.getMappings();
-					HashMap<String, String> newMappings = new HashMap<>();
-					mappings.forEach((key, value) -> {
-						newMappings.put(key, subgraphNode.formatId(value));
-					});
-					return new CommandNode(subgraphNode.formatId(n.id()),
-							AsyncCommandAction.node_async((state, config1) -> {
-								Command command = commandNode.getAction().apply(state, config1).join();
-								String NewGoToNode = subgraphNode.formatId(command.gotoNode());
-								return new Command(NewGoToNode, command.update());
-							}), newMappings);
-				}
 				return n.withIdUpdated(subgraphNode::formatId);
 			}).forEach(nodes.elements::add);
 		}
