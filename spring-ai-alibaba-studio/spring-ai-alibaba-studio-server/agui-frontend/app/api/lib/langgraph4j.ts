@@ -238,8 +238,7 @@ export class Langgraph4jAdapter implements CopilotServiceAdapter {
                   break;
                 case 'TEXT_MESSAGE_START':
                    eventStream$.sendTextMessageContent({
-                    messageId: message.message_id,
-                    content: 'i哦阿姐送到附近哦啊事件的发生多久哦分',
+                    messageId: message.message_id
                   });
                   break;
                 case 'TEXT_MESSAGE_CONTENT':

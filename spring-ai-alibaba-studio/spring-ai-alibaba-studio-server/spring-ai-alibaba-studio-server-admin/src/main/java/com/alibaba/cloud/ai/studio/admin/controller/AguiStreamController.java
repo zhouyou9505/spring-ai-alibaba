@@ -59,6 +59,8 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.concurrent.CompletableFuture;
 
+import static java.lang.String.format;
+
 @RestController
 @RequestMapping("/")
 @Tag(name = "CopilotKit ServiceAdapter Controller", description = "CopilotKit ServiceAdapter streaming controller")
@@ -215,43 +217,38 @@ public class AguiStreamController {
     private List<ToolCallback> convertToolsToToolCallbacks(List<Tool> tools) {
         if (tools == null || tools.isEmpty()) {
             // 如果没有传入工具，只返回默认的weather tool
-            ToolCallback weatherToolCallback = ToolCallbacks.from(new WeatherTool())[0];
-            return List.of(weatherToolCallback);
+
         }
+        ToolCallback[] weatherToolCallback = ToolCallbacks.from(new WeatherTool());
+        return List.of(weatherToolCallback);
 
-        List<ToolCallback> toolCallbacks = new ArrayList<>();
-        Set<String> registeredToolNames = new HashSet<>(); // 用于防止重复注册
-
-        for (Tool tool : tools) {
-            // 检查是否已经注册过相同名称的工具
-            if (registeredToolNames.contains(tool.name())) {
-                log.warn("工具 {} 已经注册，跳过重复注册", tool.name());
-                continue;
-            }
-            
-            // 为每个 Tool 创建一个 FunctionToolCallback
-            FunctionToolCallback toolCallback = FunctionToolCallback.builder(tool.name(), (String input) -> {
-                        // 这里可以实现具体的工具执行逻辑
-                        log.info("工具 {} 被调用，参数: {}", tool.name(), input);
-                        return "Tool " + tool.name() + " executed with input: " + input;
-                    })
-                    .description(tool.description())
-                    .inputType(String.class)
-                    .build();
-
-            toolCallbacks.add(toolCallback);
-            registeredToolNames.add(tool.name());
-        }
+//        List<ToolCallback> toolCallbacks = new ArrayList<>();
+//        Set<String> registeredToolNames = new HashSet<>(); // 用于防止重复注册
+//
+//        for (Tool tool : tools) {
+//            // 检查是否已经注册过相同名称的工具
+//            if (registeredToolNames.contains(tool.name())) {
+//                log.warn("工具 {} 已经注册，跳过重复注册", tool.name());
+//                continue;
+//            }
+//
+//            // 为每个 Tool 创建一个 FunctionToolCallback
+//            FunctionToolCallback toolCallback = FunctionToolCallback.builder(tool.name(), (String input) -> {
+//                        // 这里可以实现具体的工具执行逻辑
+//                        log.info("工具 {} 被调用，参数: {}", tool.name(), input);
+//                        return "Tool " + tool.name() + " executed with input: " + input;
+//                    })
+//                    .description(tool.description())
+//                    .inputType(String.class)
+//                    .build();
+//
+//            toolCallbacks.add(toolCallback);
+//            registeredToolNames.add(tool.name());
+//        }
         
-        // 只在没有weather_tool时才添加默认的weather tool
-        if (!registeredToolNames.contains("weather_tool")) {
-            ToolCallback weatherToolCallback = ToolCallbacks.from(new WeatherTool())[0];
-            toolCallbacks.add(weatherToolCallback);
-            registeredToolNames.add("weather_tool");
-        }
-        
-        log.info("注册的工具: {}", registeredToolNames);
-        return toolCallbacks;
+
+//        log.info("注册的工具: {}", registeredToolNames);
+//        return toolCallbacks;
     }
 
     /**
@@ -454,7 +451,18 @@ public class AguiStreamController {
         public String getWeather(@ToolParam(description = "城市名称") String city,
                                  @ToolParam(description = "当前时间戳") String currentTimestamp) {
             System.out.println("==TOOL被调用==");
-            return String.format("{\"city\": \"%s\", \"temperature\": -50, \"time\": \"%s\"}", city, currentTimestamp);
+            return String.format("{\"city\": \"%s\", \"temperature\": -10, \"time\": \"%s\"}", city, currentTimestamp);
         }
+
+        @org.springframework.ai.tool.annotation.Tool( description = "Send an email to someone")
+        public String sendEmail(
+                @ToolParam( description = "destination address") String to,
+                @ToolParam( description = "subject of the email") String subject,
+                @ToolParam( description = "body of the email") String body
+        ) {
+            // This is a placeholder for the actual implementation
+            return format("mail sent to %s with subject %s", to, subject);
+        }
+
     }
 }
