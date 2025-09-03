@@ -27,6 +27,7 @@ import com.alibaba.cloud.ai.graph.event.manager.EventHandler;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
@@ -114,18 +115,44 @@ public class LlmNode implements NodeAction {
 				callbackManager.onTextMessageStartEvent(startEvent);
 			}
 
-			ChatResponse response = call();
-
-			if (callbackManager != null) {
-				TextMessageContentEvent contentEvent = new TextMessageContentEvent();
-				contentEvent.setMessageId(messageId);
-				contentEvent.setDelta(response.getResult().getOutput().getText());
-				callbackManager.onTextMessageContentEvent(contentEvent);
-
-				TextMessageEndEvent endEvent = new TextMessageEndEvent();
-				endEvent.setMessageId(messageId);
-				callbackManager.onTextMessageEndEvent(endEvent);
-			}
+			StringBuilder contentBuilder = new StringBuilder();
+            Flux<ChatResponse> chatResponseFlux = stream();
+			
+			// 用于存储最终的完整 ChatResponse
+			final ChatResponse[] finalResponse = new ChatResponse[1];
+			
+			// 流式读取内容，每个 delta 都发送给 callback，同时保存最后的 ChatResponse
+			chatResponseFlux.doOnNext(chatResponse -> {
+				// 保存最后的 ChatResponse（流式的最后一个就是完整的）
+				finalResponse[0] = chatResponse;
+				
+				if (chatResponse.getResult() != null && chatResponse.getResult().getOutput() != null) {
+					String delta = chatResponse.getResult().getOutput().getText();
+					if (delta != null) {
+						// 累积完整内容（用于 debug 和 logging）
+						contentBuilder.append(delta);
+						
+						// 发送流式内容事件
+						if (callbackManager != null) {
+							TextMessageContentEvent contentEvent = new TextMessageContentEvent();
+							contentEvent.setMessageId(messageId);
+							contentEvent.setDelta(delta);
+							callbackManager.onTextMessageContentEvent(contentEvent);
+						}
+					}
+				}
+			})
+			.doOnComplete(() -> {
+				// 流式读取完成，发送结束事件
+				if (callbackManager != null) {
+					TextMessageEndEvent endEvent = new TextMessageEndEvent();
+					endEvent.setMessageId(messageId);
+					callbackManager.onTextMessageEndEvent(endEvent);
+				}
+			})
+			.blockLast(); // 阻塞式等待流式读取完成
+			
+			ChatResponse response = finalResponse[0];
 
 			Map<String, Object> updatedState = new HashMap<>();
 			updatedState.put("messages", response.getResult().getOutput());
