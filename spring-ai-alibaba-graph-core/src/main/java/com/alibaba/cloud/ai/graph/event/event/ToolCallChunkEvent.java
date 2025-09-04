@@ -16,7 +16,7 @@ import com.alibaba.cloud.ai.graph.event.type.EventType;
  * correlation and debugging purposes.
  * </p>
  *
- * @see com.alibaba.cloud.ai.dashscope.event.event.BaseEvent
+ * @see com.alibaba.cloud.ai.graph.event.event.BaseEvent
  * @see EventType#TOOL_CALL_CHUNK
  * @see ToolCallArgsEvent
  * @see ToolCallStartEvent

@@ -1,6 +1,5 @@
 package com.alibaba.cloud.ai.graph.event.message;
 
-import com.alibaba.cloud.ai.graph.event.tool.ToolCall;
 import org.springframework.ai.chat.messages.*;
 
 import java.util.Map;
@@ -40,7 +39,6 @@ import static java.util.Collections.emptyList;
  * This class is stateless and thread-safe, making it suitable for use in
  * concurrent environments and as a singleton or utility class.
  *
- * @author Pascal Wilbrink
  */
 public class MessageMapper {
 

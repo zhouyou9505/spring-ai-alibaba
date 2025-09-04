@@ -14,7 +14,7 @@ import com.alibaba.cloud.ai.graph.event.type.EventType;
  * field to store the error message or description.
  * </p>
  *
- * @see com.alibaba.cloud.ai.dashscope.event.event.BaseEvent
+ * @see com.alibaba.cloud.ai.graph.event.event.BaseEvent
  * @see EventType#RUN_ERROR
  * @author Pascal Wilbrink
  */

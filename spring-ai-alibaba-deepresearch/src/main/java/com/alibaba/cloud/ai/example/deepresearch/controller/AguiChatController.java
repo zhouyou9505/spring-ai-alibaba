@@ -18,8 +18,6 @@ package com.alibaba.cloud.ai.example.deepresearch.controller;
 
 import com.alibaba.cloud.ai.example.deepresearch.config.DeepResearchProperties;
 import com.alibaba.cloud.ai.example.deepresearch.controller.graph.GraphProcess;
-import com.alibaba.cloud.ai.example.deepresearch.controller.request.ChatRequestProcess;
-import com.alibaba.cloud.ai.example.deepresearch.model.req.ChatRequest;
 import com.alibaba.cloud.ai.example.deepresearch.model.req.FeedbackRequest;
 import com.alibaba.cloud.ai.example.deepresearch.model.req.GraphId;
 import com.alibaba.cloud.ai.example.deepresearch.model.response.ReportResponse;
@@ -59,7 +57,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

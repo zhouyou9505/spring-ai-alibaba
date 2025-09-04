@@ -15,7 +15,7 @@ import com.alibaba.cloud.ai.graph.event.type.EventType;
  * the name of the completed step for identification purposes.
  * </p>
  *
- * @see com.alibaba.cloud.ai.dashscope.event.event.BaseEvent
+ * @see com.alibaba.cloud.ai.graph.event.event.BaseEvent
  * @see EventType#STEP_FINISHED
  * @see StepStartedEvent
  * @author Pascal Wilbrink

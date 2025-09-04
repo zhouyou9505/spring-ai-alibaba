@@ -6,21 +6,6 @@ import javax.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.Objects;
 
-/**
- * Abstract base class for all events that the AG-UI protocol can emit.
- * <p>
- * This class provides common functionality for events including type identification,
- * timestamp tracking, and raw event data storage. All concrete event implementations
- * should extend this base class to ensure consistent event handling.
- * </p>
- * <p>
- * The timestamp is automatically set to the current time when the event is created, but
- * can be overridden if needed. The raw event object can store the original event data
- * from external sources.
- * </p>
- *
- * @author Pascal Wilbrink
- */
 public abstract class BaseEvent {
 
 	private final EventType type;

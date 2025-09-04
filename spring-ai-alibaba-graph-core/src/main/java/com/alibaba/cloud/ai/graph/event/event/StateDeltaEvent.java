@@ -12,10 +12,10 @@ import com.alibaba.cloud.ai.graph.event.type.EventType;
  * <p>
  * The event automatically sets its type to {@link EventType#STATE_DELTA} and can carry
  * the actual state change data through the inherited
- * {@link com.alibaba.cloud.ai.dashscope.event.event.BaseEvent#setRawEvent(Object)} method.
+ * {@link com.alibaba.cloud.ai.graph.event.event.BaseEvent#setRawEvent(Object)} method.
  * </p>
  *
- * @see com.alibaba.cloud.ai.dashscope.event.event.BaseEvent
+ * @see com.alibaba.cloud.ai.graph.event.event.BaseEvent
  * @see EventType#STATE_DELTA
  * @author Pascal Wilbrink
  */

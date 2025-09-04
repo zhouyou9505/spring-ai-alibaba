@@ -9,16 +9,6 @@ import com.alibaba.cloud.ai.graph.event.type.EventType;
  * typically for synchronization, debugging, or state restoration purposes. Unlike delta
  * events, this represents the complete state at a specific point in time.
  * </p>
- * <p>
- * The event automatically sets its type to {@link EventType#STATE_SNAPSHOT} and can carry
- * the actual state data through the inherited {@link com.alibaba.cloud.ai.dashscope.event.event.BaseEvent#setRawEvent(Object)}
- * method.
- * </p>
- *
- * @see com.alibaba.cloud.ai.dashscope.event.event.BaseEvent
- * @see EventType#STATE_SNAPSHOT
- * @see StateDeltaEvent
- * @author Pascal Wilbrink
  */
 public class StateSnapshotEvent extends BaseEvent {
 

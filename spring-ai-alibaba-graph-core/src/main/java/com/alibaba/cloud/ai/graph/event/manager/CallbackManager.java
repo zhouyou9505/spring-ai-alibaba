@@ -11,17 +11,10 @@ import com.alibaba.cloud.ai.graph.event.event.StateDeltaEvent;
 import com.alibaba.cloud.ai.graph.event.event.StateSnapshotEvent;
 import com.alibaba.cloud.ai.graph.event.event.StepFinishedEvent;
 import com.alibaba.cloud.ai.graph.event.event.StepStartedEvent;
-import com.alibaba.cloud.ai.graph.event.event.TextMessageChunkEvent;
 import com.alibaba.cloud.ai.graph.event.event.TextMessageContentEvent;
 import com.alibaba.cloud.ai.graph.event.event.TextMessageEndEvent;
 import com.alibaba.cloud.ai.graph.event.event.TextMessageStartEvent;
-import com.alibaba.cloud.ai.graph.event.event.ThinkingEndEvent;
-import com.alibaba.cloud.ai.graph.event.event.ThinkingStartEvent;
-import com.alibaba.cloud.ai.graph.event.event.ThinkingTextMessageContentEvent;
-import com.alibaba.cloud.ai.graph.event.event.ThinkingTextMessageEndEvent;
-import com.alibaba.cloud.ai.graph.event.event.ThinkingTextMessageStartEvent;
 import com.alibaba.cloud.ai.graph.event.event.ToolCallArgsEvent;
-import com.alibaba.cloud.ai.graph.event.event.ToolCallChunkEvent;
 import com.alibaba.cloud.ai.graph.event.event.ToolCallEndEvent;
 import com.alibaba.cloud.ai.graph.event.event.ToolCallResultEvent;
 import com.alibaba.cloud.ai.graph.event.event.ToolCallStartEvent;
@@ -48,20 +41,11 @@ public interface CallbackManager {
     void onTextMessageStartEvent(TextMessageStartEvent event);
     void onTextMessageContentEvent(TextMessageContentEvent event);
     void onTextMessageEndEvent(TextMessageEndEvent event);
-    void onTextMessageChunkEvent(TextMessageChunkEvent event);
-    
-    // 思考过程事件
-    void onThinkingStartEvent(ThinkingStartEvent event);
-    void onThinkingEndEvent(ThinkingEndEvent event);
-    void onThinkingTextMessageStartEvent(ThinkingTextMessageStartEvent event);
-    void onThinkingTextMessageContentEvent(ThinkingTextMessageContentEvent event);
-    void onThinkingTextMessageEndEvent(ThinkingTextMessageEndEvent event);
-    
+
     // 工具调用事件
     void onToolCallStartEvent(ToolCallStartEvent event);
     void onToolCallArgsEvent(ToolCallArgsEvent event);
     void onToolCallEndEvent(ToolCallEndEvent event);
-    void onToolCallChunkEvent(ToolCallChunkEvent event);
     void onToolCallResultEvent(ToolCallResultEvent event);
     
     // 状态管理事件

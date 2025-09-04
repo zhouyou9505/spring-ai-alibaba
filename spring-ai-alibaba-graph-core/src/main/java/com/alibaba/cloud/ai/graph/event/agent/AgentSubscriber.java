@@ -18,8 +18,6 @@ import com.alibaba.cloud.ai.graph.event.tool.ToolCall;
  * <p>
  * All methods have default empty implementations, allowing implementers to selectively
  * override only the events they're interested in.
- *
- * @author Pascal Wilbrink
  */
 public interface AgentSubscriber {
 

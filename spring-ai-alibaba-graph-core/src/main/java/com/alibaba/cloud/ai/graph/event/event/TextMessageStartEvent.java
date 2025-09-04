@@ -15,11 +15,10 @@ import com.alibaba.cloud.ai.graph.event.type.EventType;
  * establishes the context for the streaming message that will follow.
  * </p>
  *
- * @see com.alibaba.cloud.ai.dashscope.event.event.BaseEvent
+ * @see com.alibaba.cloud.ai.graph.event.event.BaseEvent
  * @see EventType#TEXT_MESSAGE_START
  * @see TextMessageEndEvent
  * @see TextMessageContentEvent
- * @see TextMessageChunkEvent
  * @author Pascal Wilbrink
  */
 public class TextMessageStartEvent extends BaseEvent {

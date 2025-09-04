@@ -15,7 +15,7 @@ import com.alibaba.cloud.ai.graph.event.type.EventType;
  * provides fields to identify the target message and deliver the content delta.
  * </p>
  *
- * @see com.alibaba.cloud.ai.dashscope.event.event.BaseEvent
+ * @see com.alibaba.cloud.ai.graph.event.event.BaseEvent
  * @see EventType#TEXT_MESSAGE_CONTENT
  * @see TextMessageChunkEvent
  * @author Pascal Wilbrink

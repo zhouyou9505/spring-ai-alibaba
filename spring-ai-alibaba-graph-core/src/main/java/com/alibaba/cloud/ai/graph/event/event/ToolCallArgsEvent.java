@@ -16,7 +16,7 @@ import com.alibaba.cloud.ai.graph.event.type.EventType;
  * through deltas.
  * </p>
  *
- * @see com.alibaba.cloud.ai.dashscope.event.event.BaseEvent
+ * @see com.alibaba.cloud.ai.graph.event.event.BaseEvent
  * @see EventType#TOOL_CALL_ARGS
  * @see ToolCallStartEvent
  * @see ToolCallEndEvent

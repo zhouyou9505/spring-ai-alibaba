@@ -14,7 +14,7 @@ import com.alibaba.cloud.ai.graph.event.type.EventType;
  * fields to store the thread ID, run ID, and execution result.
  * </p>
  *
- * @see com.alibaba.cloud.ai.dashscope.event.event.BaseEvent
+ * @see com.alibaba.cloud.ai.graph.event.event.BaseEvent
  * @see EventType#RUN_FINISHED
  * @author Pascal Wilbrink
  */

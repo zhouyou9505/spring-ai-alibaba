@@ -15,7 +15,7 @@ import com.alibaba.cloud.ai.graph.event.type.EventType;
  * the completed tool call through its unique identifier.
  * </p>
  *
- * @see com.alibaba.cloud.ai.dashscope.event.event.BaseEvent
+ * @see com.alibaba.cloud.ai.graph.event.event.BaseEvent
  * @see EventType#TOOL_CALL_END
  * @see ToolCallStartEvent
  * @see ToolCallChunkEvent

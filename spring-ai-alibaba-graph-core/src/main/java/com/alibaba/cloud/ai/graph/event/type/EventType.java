@@ -35,18 +35,6 @@ public enum EventType {
 	/** Signals the end of a text message stream */
 	TEXT_MESSAGE_END("TEXT_MESSAGE_END"),
 
-	/** Represents a chunk of text message data */
-	TEXT_MESSAGE_CHUNK("TEXT_MESSAGE_CHUNK"),
-
-	/** Signals the start of thinking text message content */
-	THINKING_TEXT_MESSAGE_START("THINKING_TEXT_MESSAGE_START"),
-
-	/** Represents thinking text message content */
-	THINKING_TEXT_MESSAGE_CONTENT("THINKING_TEXT_MESSAGE_CONTENT"),
-
-	/** Signals the end of thinking text message content */
-	THINKING_TEXT_MESSAGE_END("THINKING_TEXT_MESSAGE_END"), // Fixed typo
-
 	/** Signals the start of a tool call */
 	TOOL_CALL_START("TOOL_CALL_START"),
 
@@ -56,17 +44,8 @@ public enum EventType {
 	/** Signals the end of a tool call */
 	TOOL_CALL_END("TOOL_CALL_END"),
 
-	/** Represents a chunk of tool call data */
-	TOOL_CALL_CHUNK("TOOL_CALL_CHUNK"),
-
 	/** Represents the result of a tool call */
 	TOOL_CALL_RESULT("TOOL_CALL_RESULT"),
-
-	/** Signals the start of a thinking process */
-	THINKING_START("THINKING_START"),
-
-	/** Signals the end of a thinking process */
-	THINKING_END("THINKING_END"),
 
 	/** Represents a complete state snapshot */
 	STATE_SNAPSHOT("STATE_SNAPSHOT"),

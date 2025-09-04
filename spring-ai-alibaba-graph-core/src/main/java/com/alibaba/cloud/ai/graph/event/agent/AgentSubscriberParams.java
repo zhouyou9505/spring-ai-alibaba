@@ -25,7 +25,6 @@ import java.util.List;
  * subscriber callbacks
  * @param input the original input parameters that were provided when the agent run was
  * initiated
- * @author Pascal Wilbrink
  */
 public record AgentSubscriberParams(List<BaseMessage> messages, State state, Agent agent, RunAgentInput input) {
 }

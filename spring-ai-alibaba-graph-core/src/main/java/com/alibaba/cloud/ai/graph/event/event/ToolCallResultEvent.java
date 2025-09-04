@@ -16,7 +16,7 @@ import com.alibaba.cloud.ai.graph.event.type.EventType;
  * identifiers, and role information.
  * </p>
  *
- * @see com.alibaba.cloud.ai.dashscope.event.event.BaseEvent
+ * @see com.alibaba.cloud.ai.graph.event.event.BaseEvent
  * @see EventType#TOOL_CALL_RESULT
  * @see ToolCallStartEvent
  * @see ToolCallEndEvent

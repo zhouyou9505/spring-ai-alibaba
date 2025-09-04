@@ -4,8 +4,6 @@ package com.alibaba.cloud.ai.graph.event.agent;
 import java.util.concurrent.CompletableFuture;
 
 /**
- *
- * Core interface for AI agent execution within the agui4j framework.
  * <p>
  * The Agent interface defines the fundamental contract for running AI agents
  * asynchronously. Implementations of this interface handle the orchestration of agent
@@ -16,7 +14,6 @@ import java.util.concurrent.CompletableFuture;
  * and events during execution are communicated through the provided AgentSubscriber
  * callback interface.
  *
- * @author Pascal Wilbrink
  */
 public interface Agent {
 

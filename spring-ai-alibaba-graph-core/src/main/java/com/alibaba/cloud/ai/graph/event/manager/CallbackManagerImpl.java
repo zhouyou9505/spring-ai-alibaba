@@ -60,37 +60,6 @@ public class CallbackManagerImpl implements CallbackManager {
         eventHandler.emitEvent(event);
     }
     
-    @Override
-    public void onTextMessageChunkEvent(TextMessageChunkEvent event) {
-        eventHandler.emitEvent(event);
-    }
-    
-    // 思考过程事件
-    @Override
-    public void onThinkingStartEvent(ThinkingStartEvent event) {
-        eventHandler.emitEvent(event);
-    }
-    
-    @Override
-    public void onThinkingEndEvent(ThinkingEndEvent event) {
-        eventHandler.emitEvent(event);
-    }
-    
-    @Override
-    public void onThinkingTextMessageStartEvent(ThinkingTextMessageStartEvent event) {
-        eventHandler.emitEvent(event);
-    }
-    
-    @Override
-    public void onThinkingTextMessageContentEvent(ThinkingTextMessageContentEvent event) {
-        eventHandler.emitEvent(event);
-    }
-    
-    @Override
-    public void onThinkingTextMessageEndEvent(ThinkingTextMessageEndEvent event) {
-        eventHandler.emitEvent(event);
-    }
-    
     // 工具调用事件
     @Override
     public void onToolCallStartEvent(ToolCallStartEvent event) {
@@ -104,11 +73,6 @@ public class CallbackManagerImpl implements CallbackManager {
     
     @Override
     public void onToolCallEndEvent(ToolCallEndEvent event) {
-        eventHandler.emitEvent(event);
-    }
-    
-    @Override
-    public void onToolCallChunkEvent(ToolCallChunkEvent event) {
         eventHandler.emitEvent(event);
     }
     

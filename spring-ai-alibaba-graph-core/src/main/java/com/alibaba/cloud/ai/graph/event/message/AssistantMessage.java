@@ -22,7 +22,6 @@ import java.util.Objects;
  *
  * @see BaseMessage
  * @see ToolCall
- * @author Pascal Wilbrink
  */
 public class AssistantMessage extends BaseMessage {
 

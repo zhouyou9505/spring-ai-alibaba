@@ -16,7 +16,6 @@ import java.util.Map;
  * synchronization should be used or consider using concurrent map implementations.
  * </p>
  *
- * @author Pascal Wilbrink
  */
 public class State {
 

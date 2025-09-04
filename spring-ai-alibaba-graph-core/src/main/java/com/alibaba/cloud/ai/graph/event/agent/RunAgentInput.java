@@ -34,7 +34,6 @@ import java.util.List;
  * @param forwardedProps arbitrary properties forwarded from the calling context, allowing
  * for flexible extension and custom configuration without modifying the core input
  * structure
- * @author Pascal Wilbrink
  */
 public record RunAgentInput(String threadId, String runId, State state, List<BaseMessage> messages, List<Tool> tools,
 		List<Context> context, Object forwardedProps) {

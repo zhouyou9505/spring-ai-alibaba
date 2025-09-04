@@ -2,23 +2,7 @@ package com.alibaba.cloud.ai.graph.event.event;
 
 import com.alibaba.cloud.ai.graph.event.type.EventType;
 
-/**
- * A concrete implementation of BaseEvent for custom user-defined events.
- * <p>
- * This event type is intended for application-specific events that don't fit into the
- * standard predefined event categories. It automatically sets the event type to
- * {@link EventType#CUSTOM}.
- * </p>
- * <p>
- * Custom events can carry additional data through the inherited
- * {@link com.alibaba.cloud.ai.dashscope.event.event.BaseEvent#setRawEvent(Object)} method to store domain-specific event
- * information.
- * </p>
- *
- * @see com.alibaba.cloud.ai.dashscope.event.event.BaseEvent
- * @see EventType#CUSTOM
- * @author Pascal Wilbrink
- */
+
 public class CustomEvent extends BaseEvent {
 
 	/**

@@ -14,7 +14,7 @@ import java.util.function.Consumer;
 public class EventHandler {
 
     
-	private Consumer<BaseEvent> consumer;
+	private final Consumer<BaseEvent> consumer;
 
 	public EventHandler(Consumer<BaseEvent> consumer) {
 		this.consumer = consumer;

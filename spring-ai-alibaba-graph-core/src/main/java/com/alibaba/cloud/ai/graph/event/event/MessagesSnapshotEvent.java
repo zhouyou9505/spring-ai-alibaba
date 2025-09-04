@@ -18,7 +18,7 @@ import java.util.List;
  * initializes with an empty message list that can be populated with the actual messages.
  * </p>
  *
- * @see com.alibaba.cloud.ai.dashscope.event.event.BaseEvent
+ * @see com.alibaba.cloud.ai.graph.event.event.BaseEvent
  * @see BaseMessage
  * @see EventType#MESSAGES_SNAPSHOT
  * @author Pascal Wilbrink

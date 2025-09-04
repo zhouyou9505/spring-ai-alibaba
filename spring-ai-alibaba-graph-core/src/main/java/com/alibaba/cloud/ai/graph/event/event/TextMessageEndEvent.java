@@ -14,7 +14,7 @@ import com.alibaba.cloud.ai.graph.event.type.EventType;
  * identifies the completed message through its unique identifier.
  * </p>
  *
- * @see com.alibaba.cloud.ai.dashscope.event.event.BaseEvent
+ * @see com.alibaba.cloud.ai.graph.event.event.BaseEvent
  * @see EventType#TEXT_MESSAGE_END
  * @see TextMessageStartEvent
  * @see TextMessageContentEvent

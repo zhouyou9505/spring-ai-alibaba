@@ -17,7 +17,6 @@ package com.alibaba.cloud.ai.graph.event.message;
  * </p>
  *
  * @see BaseMessage
- * @author Pascal Wilbrink
  */
 public class SystemMessage extends BaseMessage {
 
