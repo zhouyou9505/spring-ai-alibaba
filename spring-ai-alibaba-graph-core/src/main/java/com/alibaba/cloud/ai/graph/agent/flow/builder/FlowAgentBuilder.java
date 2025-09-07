@@ -21,6 +21,7 @@ import com.alibaba.cloud.ai.graph.CompileConfig;
 import com.alibaba.cloud.ai.graph.KeyStrategyFactory;
 import com.alibaba.cloud.ai.graph.agent.BaseAgent;
 import com.alibaba.cloud.ai.graph.agent.flow.agent.FlowAgent;
+import com.alibaba.cloud.ai.graph.event.manager.CallbackManager;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 
 /**
@@ -46,6 +47,8 @@ public abstract class FlowAgentBuilder<T extends FlowAgent, B extends FlowAgentB
 	public CompileConfig compileConfig;
 
 	public List<BaseAgent> subAgents;
+
+	public CallbackManager callbackManager;
 
 	/**
 	 * Sets the agent name.
@@ -114,6 +117,16 @@ public abstract class FlowAgentBuilder<T extends FlowAgent, B extends FlowAgentB
 	 */
 	public B subAgents(List<BaseAgent> subAgents) {
 		this.subAgents = subAgents;
+		return self();
+	}
+
+	/**
+	 * Sets the callback manager for handling lifecycle events.
+	 * @param callbackManager the callback manager
+	 * @return this builder instance for method chaining
+	 */
+	public B callbackManager(CallbackManager callbackManager) {
+		this.callbackManager = callbackManager;
 		return self();
 	}
 

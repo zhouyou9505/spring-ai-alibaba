@@ -24,7 +24,7 @@ public class EventHandler {
      * 发送事件
      * @param event 事件对象
      */
-     void emitEvent(BaseEvent event) {
+    public void emitEvent(BaseEvent event) {
         if (event != null && consumer != null) {
             consumer.accept(event);
         }

@@ -1041,37 +1041,23 @@ public class CompiledGraph {
 		private void doListeners(String scene, Throwable e) {
 			Deque<GraphLifecycleListener> listeners = new LinkedBlockingDeque<>(compileConfig.lifecycleListeners());
 
-			// 发送 AGUI 生命周期事件
+			// Note: Lifecycle events (RunStarted, RunFinished, RunError) are now handled
+			// by AbstractAgent pattern instead of CompiledGraph to provide better
+			// separation of concerns and event management
 			if (callbackManager != null) {
 				try {
-					if (START.equals(scene)) {
-						RunStartedEvent event = new RunStartedEvent();
-						event.setRunId(config.checkPointId().orElse("unknown"));
-						event.setThreadId(config.threadId().orElse("unknown"));
-						callbackManager.onRunStartedEvent(event);
+					if (NODE_BEFORE.equals(scene)){
+						StepStartedEvent event = new StepStartedEvent();
+						event.setStepId(cursor.currentNodeId());
+						event.setStepName(cursor.currentNodeId());
+						callbackManager.onStepStartedEvent(event);
+					} else if (NODE_AFTER.equals(scene)) {
+						StepFinishedEvent event = new StepFinishedEvent();
+						event.setStepId(cursor.currentNodeId());
+						event.setStepName(cursor.currentNodeId());
+						callbackManager.onStepFinishedEvent(event);
 					}
-					else if (END.equals(scene)) {
-						RunFinishedEvent event = new RunFinishedEvent();
-						event.setRunId(config.checkPointId().orElse("unknown"));
-						event.setThreadId(config.threadId().orElse("unknown"));
-						callbackManager.onRunFinishedEvent(event);
-					}
-					else if (ERROR.equals(scene)) {
-						RunErrorEvent event = new RunErrorEvent();
-						event.setError(e != null ? e.getMessage() : "Unknown error");
-						callbackManager.onRunErrorEvent(event);
-					}else if (NODE_BEFORE.equals(scene)){
-                        StepStartedEvent event = new StepStartedEvent();
-                        event.setStepId(cursor.currentNodeId());
-                        event.setStepName(cursor.currentNodeId());
-                        callbackManager.onStepStartedEvent(event);
-                    } else if (NODE_AFTER.equals(scene)) {
-                        StepFinishedEvent event = new StepFinishedEvent();
-                        event.setStepId(cursor.currentNodeId());
-                        event.setStepName(cursor.currentNodeId());
-                        callbackManager.onStepFinishedEvent(event);
-                    }
-                }
+				}
 				catch (Exception ex) {
 					log.error("Error sending AGUI lifecycle event: {}", ex.getMessage());
 				}

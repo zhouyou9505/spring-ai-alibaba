@@ -1,4 +1,4 @@
-/*
+package com.alibaba.agui;/*
  * Copyright 2024-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,41 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.alibaba.cloud.ai.studio.admin.controller;
-
-import com.alibaba.cloud.ai.graph.event.context.Context;
-import com.alibaba.cloud.ai.graph.event.agent.RunAgentInput;
 
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.alibaba.cloud.ai.graph.event.agent.RunAgentInput;
+import com.alibaba.cloud.ai.graph.event.context.Context;
+import com.alibaba.cloud.ai.graph.event.event.BaseEvent;
 import com.alibaba.cloud.ai.graph.event.message.BaseMessage;
 import com.alibaba.cloud.ai.graph.event.message.MessageMapper;
 import com.alibaba.cloud.ai.graph.event.state.State;
 import com.alibaba.cloud.ai.graph.event.tool.Tool;
 import com.alibaba.cloud.ai.graph.event.tool.ToolCall;
-import com.alibaba.cloud.ai.studio.admin.agent.AgentOrchestrator;
 import com.alibaba.fastjson.JSON;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.support.ToolCallbacks;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
-import com.alibaba.cloud.ai.graph.event.event.BaseEvent;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static java.lang.String.format;
 
@@ -370,7 +372,7 @@ public class AguiStreamController {
                 message = new com.alibaba.cloud.ai.graph.event.message.UserMessage(id, content, "");
                 break;
             case "assistant":
-                List<com.alibaba.cloud.ai.graph.event.tool.ToolCall> toolCalls = new ArrayList<>();
+                List<ToolCall> toolCalls = new ArrayList<>();
                 if (msgObj.containsKey("toolCalls") && msgObj.getJSONArray("toolCalls") != null) {
                     com.alibaba.fastjson.JSONArray toolCallsArray = msgObj.getJSONArray("toolCalls");
                     if (!toolCallsArray.isEmpty()) {

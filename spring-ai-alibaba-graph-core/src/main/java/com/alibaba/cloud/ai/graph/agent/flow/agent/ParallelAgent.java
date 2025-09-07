@@ -61,14 +61,14 @@ public class ParallelAgent extends FlowAgent {
 
 	protected ParallelAgent(ParallelAgentBuilder builder) throws GraphStateException {
 		super(builder.name, builder.description, builder.outputKey, builder.inputKey, builder.keyStrategyFactory,
-				builder.compileConfig, builder.subAgents);
+				builder.compileConfig, builder.subAgents, builder.callbackManager);
 		this.mergeStrategy = builder.mergeStrategy != null ? builder.mergeStrategy : new DefaultMergeStrategy();
 		this.maxConcurrency = builder.maxConcurrency;
 		this.graph = initGraph();
 	}
 
 	@Override
-	public Optional<OverAllState> invoke(Map<String, Object> input) throws GraphStateException, GraphRunnerException {
+	protected Optional<OverAllState> doInvoke(Map<String, Object> input) throws GraphStateException, GraphRunnerException {
 		CompiledGraph compiledGraph = getAndCompileGraph();
 		return compiledGraph.invoke(input);
 	}

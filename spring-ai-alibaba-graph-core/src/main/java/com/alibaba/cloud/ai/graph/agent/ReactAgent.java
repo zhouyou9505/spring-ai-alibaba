@@ -86,13 +86,9 @@ public class ReactAgent extends BaseAgent {
 
 	private String inputKey;
 
-    private CallbackManager callbackManager;
-
 	protected ReactAgent(LlmNode llmNode, ToolNode toolNode, Builder builder) throws GraphStateException {
-		this.name = builder.name;
-		this.description = builder.description;
+        super(builder.name,builder.description,builder.outputKey,builder.callbackManager);
 		this.instruction = builder.instruction;
-		this.outputKey = builder.outputKey;
 		this.llmNode = llmNode;
 		this.toolNode = toolNode;
 		this.keyStrategyFactory = builder.keyStrategyFactory;
@@ -103,12 +99,12 @@ public class ReactAgent extends BaseAgent {
 		this.preToolHook = builder.preToolHook;
 		this.postToolHook = builder.postToolHook;
 		this.inputKey = builder.inputKey;
-        this.callbackManager = builder.callbackManager;
 		// 初始化graph
 		this.graph = initGraph();
 	}
 
-	public Optional<OverAllState> invoke(Map<String, Object> input) throws GraphStateException, GraphRunnerException {
+	@Override
+	protected Optional<OverAllState> doInvoke(Map<String, Object> input) throws GraphStateException, GraphRunnerException {
 		if (this.compiledGraph == null) {
 			this.compiledGraph = getAndCompileGraph();
 		}

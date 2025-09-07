@@ -32,6 +32,9 @@ public enum EventType {
 	/** Represents incremental text message content */
 	TEXT_MESSAGE_CONTENT("TEXT_MESSAGE_CONTENT"),
 
+	/** Represents incremental text message chunk with role information */
+	TEXT_MESSAGE_CHUNK("TEXT_MESSAGE_CHUNK"),
+
 	/** Signals the end of a text message stream */
 	TEXT_MESSAGE_END("TEXT_MESSAGE_END"),
 
@@ -75,7 +78,22 @@ public enum EventType {
 	STEP_STARTED("STEP_STARTED"),
 
 	/** Signals the completion of a step execution */
-	STEP_FINISHED("STEP_FINISHED"); // Fixed inconsistent naming
+	STEP_FINISHED("STEP_FINISHED"),
+
+	/** Signals the start of an agent execution */
+	AGENT_START("AGENT_START"),
+
+	/** Signals the completion of an agent execution */
+	AGENT_FINISH("AGENT_FINISH"),
+
+	/** Signals the start of a retriever operation */
+	RETRIEVER_START("RETRIEVER_START"),
+
+	/** Signals the completion of a retriever operation */
+	RETRIEVER_END("RETRIEVER_END"),
+
+	/** Signals an error during retriever operation */
+	RETRIEVER_ERROR("RETRIEVER_ERROR");
 
 	private final String name;
 

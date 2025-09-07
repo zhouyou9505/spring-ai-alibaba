@@ -17,6 +17,33 @@ public class CallbackManagerImpl implements CallbackManager {
         this.eventHandler = eventHandler;
     }
     
+    // 代理生命周期事件
+    @Override
+    public void onAgentStartEvent(AgentStartEvent event) {
+        eventHandler.emitEvent(event);
+    }
+    
+    @Override
+    public void onAgentFinishEvent(AgentFinishedEvent event) {
+        eventHandler.emitEvent(event);
+    }
+    
+    // 检索器生命周期事件
+    @Override
+    public void onRetrieverStartEvent(RetrieverStartEvent event) {
+        eventHandler.emitEvent(event);
+    }
+    
+    @Override
+    public void onRetrieverEndEvent(RetrieverFinishedEvent event) {
+        eventHandler.emitEvent(event);
+    }
+    
+    @Override
+    public void onRetrieverErrorEvent(RetrieverErrorEvent event) {
+        eventHandler.emitEvent(event);
+    }
+    
     // 执行生命周期事件
     @Override
     public void onRunStartedEvent(RunStartedEvent event) {

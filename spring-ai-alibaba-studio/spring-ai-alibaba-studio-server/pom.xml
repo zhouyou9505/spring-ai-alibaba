@@ -34,6 +34,7 @@
         <module>spring-ai-alibaba-studio-server-runtime</module>
         <module>spring-ai-alibaba-studio-server-admin</module>
         <module>spring-ai-alibaba-studio-server-openapi</module>
+        <module>spring-ai-agui</module>
     </modules>
 
     <scm>

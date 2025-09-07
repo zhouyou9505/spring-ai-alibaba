@@ -204,7 +204,7 @@ public class DashScopePropertiesTests {
 				assertThat(speechProperties.getBaseUrl()).isEqualTo("TEST_BASE_URL2");
 
 				assertThat(speechProperties.getOptions().getModel()).isEqualTo("TTS_2");
-				assertThat(speechProperties.getOptions().getVoice()).isEqualTo("echo");
+				assertThat(speechProperties.getOptions().getVoice()).isEqualTo("ai_researcher");
 				assertThat(speechProperties.getOptions().getResponseFormat())
 					.isEqualTo(DashScopeAudioSpeechApi.ResponseFormat.PCM);
 				assertThat(speechProperties.getOptions().getSpeed()).isEqualTo(0.8f);

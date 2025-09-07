@@ -25,6 +25,7 @@ import com.alibaba.cloud.ai.graph.action.AsyncNodeAction;
 import com.alibaba.cloud.ai.graph.agent.BaseAgent;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.agent.flow.builder.FlowGraphBuilder;
+import com.alibaba.cloud.ai.graph.event.manager.CallbackManager;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 
 import static com.alibaba.cloud.ai.graph.action.AsyncNodeAction.node_async;
@@ -44,9 +45,10 @@ public abstract class FlowAgent extends BaseAgent {
 	protected CompiledGraph compiledGraph;
 
 	protected FlowAgent(String name, String description, String outputKey, String inputKey,
-			KeyStrategyFactory keyStrategyFactory, CompileConfig compileConfig, List<BaseAgent> subAgents)
+			KeyStrategyFactory keyStrategyFactory, CompileConfig compileConfig, List<BaseAgent> subAgents,
+			CallbackManager callbackManager)
 			throws GraphStateException {
-		super(name, description, outputKey);
+		super(name, description, outputKey, callbackManager);
 		this.compileConfig = compileConfig;
 		this.inputKey = inputKey;
 		this.keyStrategyFactory = keyStrategyFactory;

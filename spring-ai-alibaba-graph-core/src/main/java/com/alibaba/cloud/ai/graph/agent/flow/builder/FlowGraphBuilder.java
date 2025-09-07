@@ -20,6 +20,7 @@ import com.alibaba.cloud.ai.graph.StateGraph;
 import com.alibaba.cloud.ai.graph.agent.BaseAgent;
 import com.alibaba.cloud.ai.graph.agent.flow.strategy.FlowGraphBuildingStrategyRegistry;
 import com.alibaba.cloud.ai.graph.agent.flow.strategy.FlowGraphBuildingStrategy;
+import com.alibaba.cloud.ai.graph.event.manager.CallbackManager;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import org.springframework.ai.chat.model.ChatModel;
 
@@ -63,6 +64,8 @@ public class FlowGraphBuilder {
 		private Map<String, BaseAgent> conditionalAgents;
 
 		private ChatModel chatModel;
+
+		private CallbackManager callbackManager;
 
 		private Map<String, Object> customProperties = new HashMap<>();
 
@@ -115,6 +118,14 @@ public class FlowGraphBuilder {
 			this.chatModel = chatModel;
 		}
 
+		public CallbackManager getCallbackManager() {
+			return callbackManager;
+		}
+
+		public void setCallbackManager(CallbackManager callbackManager) {
+			this.callbackManager = callbackManager;
+		}
+
 		// Builder methods
 		public static FlowGraphConfig builder() {
 			return new FlowGraphConfig();
@@ -147,6 +158,11 @@ public class FlowGraphBuilder {
 
 		public FlowGraphConfig chatModel(ChatModel model) {
 			this.chatModel = model;
+			return this;
+		}
+
+		public FlowGraphConfig callbackManager(CallbackManager callbackManager) {
+			this.callbackManager = callbackManager;
 			return this;
 		}
 

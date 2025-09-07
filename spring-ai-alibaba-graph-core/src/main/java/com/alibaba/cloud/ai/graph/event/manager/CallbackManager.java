@@ -1,6 +1,11 @@
 package com.alibaba.cloud.ai.graph.event.manager;
 
 
+import com.alibaba.cloud.ai.graph.event.event.AgentStartEvent;
+import com.alibaba.cloud.ai.graph.event.event.AgentFinishedEvent;
+import com.alibaba.cloud.ai.graph.event.event.RetrieverStartEvent;
+import com.alibaba.cloud.ai.graph.event.event.RetrieverFinishedEvent;
+import com.alibaba.cloud.ai.graph.event.event.RetrieverErrorEvent;
 import com.alibaba.cloud.ai.graph.event.event.CustomEvent;
 import com.alibaba.cloud.ai.graph.event.event.MessagesSnapshotEvent;
 import com.alibaba.cloud.ai.graph.event.event.RawEvent;
@@ -27,6 +32,15 @@ import com.alibaba.cloud.ai.graph.event.event.ToolCallStartEvent;
  * </p>
  */
 public interface CallbackManager {
+    
+    // 代理生命周期事件
+    void onAgentStartEvent(AgentStartEvent event);
+    void onAgentFinishEvent(AgentFinishedEvent event);
+    
+    // 检索器生命周期事件
+    void onRetrieverStartEvent(RetrieverStartEvent event);
+    void onRetrieverEndEvent(RetrieverFinishedEvent event);
+    void onRetrieverErrorEvent(RetrieverErrorEvent event);
     
     // 执行生命周期事件
     void onRunStartedEvent(RunStartedEvent event);
