@@ -12,7 +12,7 @@ import java.util.Objects;
  * @param value the actual value or data associated with this context. Cannot be null.
  * @author Pascal Wilbrink
  */
-public record Context(@NotNull String description, @NotNull String value) {
+public record Context(@NotNull String description, @NotNull Object value) {
 	/**
 	 * @throws NullPointerException if description or value is null
 	 */
