@@ -14,13 +14,7 @@ public class CopilotKitConfig {
 
   @Bean
   public CopilotKitRemoteEndpoint copilotSdk() {
-    // ——— 示例：一个假 Action、一个假 Agent（请替换成你真实的） ———
-    Action ping = new Action() {
-      public String name(){ return "ping"; }
-      public Map<String,Object> dictRepr(){ return Map.of("name","ping","description","health check","parameters", List.of()); }
-      public Object execute(Map<String,Object> args){ return Map.of("pong", true); }
-    };
-
+    // ——— 示例：一个假 Agent（请替换成你真实的） ———
     Agent echoAgent = new Agent() {
       public String name(){ return "ai_researcher"; }
       public Map<String,Object> dictRepr(){ return Map.of("name","ai_researcher","description","ai_researcher agent","type","springai"); }
@@ -37,6 +31,6 @@ public class CopilotKitConfig {
       private String toJson(Object o){ try { return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(o);} catch(Exception e){ return "null"; } }
     };
 
-    return new CopilotKitRemoteEndpoint(List.of(ping), List.of(echoAgent));
+    return new CopilotKitRemoteEndpoint(List.of(), List.of(echoAgent));
   }
 }

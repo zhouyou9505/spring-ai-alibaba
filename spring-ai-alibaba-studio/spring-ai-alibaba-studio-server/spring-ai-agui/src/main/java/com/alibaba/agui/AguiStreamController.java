@@ -38,7 +38,7 @@ import java.util.stream.Collectors;
 import static java.lang.String.format;
 
 @RestController
-@RequestMapping("/")
+@RequestMapping("/copilotkit")
 @Tag(name = "CopilotKit ServiceAdapter Controller", description = "CopilotKit ServiceAdapter streaming controller")
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
 @Slf4j
@@ -54,20 +54,12 @@ public class AguiStreamController {
         this.messageMapper = new MessageMapper();
     }
 
-    /**
-     * 预检（让浏览器 CORS 通过）
-     */
-    @RequestMapping(path = "/copilotkit", method = RequestMethod.OPTIONS)
-    public ResponseEntity<Void> copilotKitPreflight(HttpServletResponse resp) {
-        setCorsHeaders(resp);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-    }
 
     /**
      * CopilotKit ServiceAdapter 主入口（SSE 流）
      */
     @PostMapping(
-            path = "/copilotkit/agents/execute",
+            path = "agent",
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.TEXT_EVENT_STREAM_VALUE
     )
@@ -129,7 +121,35 @@ public class AguiStreamController {
         }, input);
 
         // 合并心跳与事件
-        return Flux.merge(heartbeat, runFlux);
+        return runFlux;
+    }
+
+    /**
+     * CopilotKit Actions Execute 端点
+     */
+    @PostMapping(
+            path = "/actions/execute",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    @Operation(summary = "CopilotKit Actions Execute Endpoint", description = "Execute CopilotKit actions")
+    public ResponseEntity<Map<String, Object>> executeAction(@RequestBody Map<String, Object> requestBody) {
+        try {
+            String actionName = (String) requestBody.get("name");
+            Map<String, Object> arguments = (Map<String, Object>) requestBody.get("arguments");
+            
+
+            // 简单的 action 执行逻辑
+            Map<String, Object> result = new HashMap<>();
+            result.put("action", actionName);
+            result.put("arguments", arguments);
+            result.put("result", "Action executed successfully");
+            result.put("timestamp", System.currentTimeMillis());
+            
+            return ResponseEntity.ok(Map.of("result", result));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
     }
 
     /**

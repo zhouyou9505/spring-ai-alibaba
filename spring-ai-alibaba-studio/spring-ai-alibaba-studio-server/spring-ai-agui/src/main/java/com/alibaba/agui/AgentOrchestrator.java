@@ -10,6 +10,8 @@ import com.alibaba.cloud.ai.graph.event.manager.CallbackManagerImpl;
 import com.alibaba.cloud.ai.graph.event.manager.EventHandler;
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.codec.ServerSentEvent;
 import reactor.core.publisher.Flux;
 
@@ -20,6 +22,8 @@ import java.util.function.Consumer;
 
 @Slf4j
 public class AgentOrchestrator {
+
+    private static final Logger log = LoggerFactory.getLogger(AgentOrchestrator.class);
 
     public AgentOrchestrator() {}
 
@@ -35,9 +39,10 @@ public class AgentOrchestrator {
                 try {
                     ServerSentEvent<BaseEvent> sse = ServerSentEvent.<BaseEvent>builder()
                             .event("message")                 // ← CopilotKit/AG-UI 约定
-                            .id(UUID.randomUUID().toString()) // 唯一 id，方便客户端去重
+                            .id(input.threadId()) // 唯一 id，方便客户端去重
                             .data(event)                      // 序列化为 data: {...}
                             .build();
+                    log.info(JSON.toJSONString(event));
                     emitter.next(sse);
                 } catch (Exception ex) {
                     emitter.error(ex);

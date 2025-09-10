@@ -73,10 +73,10 @@ public abstract class BaseAgent {
 	 */
 	protected void emitAgentStartEvent() {
 		if (callbackManager != null) {
-			AgentStartEvent event = new AgentStartEvent();
-			event.setAgentId(this.name != null ? this.name : "Agent");
-			event.setAgentName(this.name);
-			callbackManager.onAgentStartEvent(event);
+//			AgentStartEvent event = new AgentStartEvent();
+//			event.setAgentId(this.name != null ? this.name : "Agent");
+//			event.setAgentName(this.name);
+//			callbackManager.onAgentStartEvent(event);
 		}
 	}
 
@@ -85,15 +85,15 @@ public abstract class BaseAgent {
 	 * @param error 错误信息，如果为null表示成功结束
 	 */
 	protected void emitAgentFinishedEvent(String error) {
-		if (callbackManager != null) {
-			AgentFinishedEvent event = new AgentFinishedEvent();
-			event.setAgentId(this.name != null ? this.name : "Agent");
-			event.setAgentName(this.name);
-			if (error != null) {
-				event.setError(error);
-			}
-			callbackManager.onAgentFinishEvent(event);
-		}
+//		if (callbackManager != null) {
+//			AgentFinishedEvent event = new AgentFinishedEvent();
+//			event.setAgentId(this.name != null ? this.name : "Agent");
+//			event.setAgentName(this.name);
+//			if (error != null) {
+//				event.setError(error);
+//			}
+//			callbackManager.onAgentFinishEvent(event);
+//		}
 	}
 
 	/**
