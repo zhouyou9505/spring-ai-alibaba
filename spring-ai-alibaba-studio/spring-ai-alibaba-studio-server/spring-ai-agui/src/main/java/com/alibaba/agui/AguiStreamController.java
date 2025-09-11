@@ -59,7 +59,6 @@ public class AguiStreamController {
      * CopilotKit ServiceAdapter 主入口（SSE 流）
      */
     @PostMapping(
-            path = "agent",
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.TEXT_EVENT_STREAM_VALUE
     )
@@ -79,20 +78,11 @@ public class AguiStreamController {
         RunAgentInput input = createAdaptedRunAgentInput(jsonObject);
 
         // 准备 Tools & Messages
-        List<ToolCallback> toolCallbacks = convertToolsToToolCallbacks(input.tools());
+        List<ToolCallback> toolCallbacks = Arrays.asList(ToolCallbacks.from(new Tools()));
         List<org.springframework.ai.chat.messages.AbstractMessage> springMessages =
                 convertMessagesToSpringMessages(input.messages());
 
         AgentOrchestrator orchestrator = new AgentOrchestrator();
-
-        // 心跳：每 15s 发一次注释行，防止中间层断流
-        Flux<ServerSentEvent<BaseEvent>> heartbeat = Flux
-                .interval(Duration.ofSeconds(15))
-                .map(i -> ServerSentEvent.<BaseEvent>builder()
-                        .event("comment")
-                        .data(null)
-                        .comment("ping " + i)
-                        .build());
 
         // 主执行流
         Flux<ServerSentEvent<BaseEvent>> runFlux = orchestrator.run(callbackManager -> {
@@ -180,20 +170,16 @@ public class AguiStreamController {
      */
     private RunAgentInput createAdaptedRunAgentInput(com.alibaba.fastjson.JSONObject json) {
         String threadId = json.getString("threadId");
-        String runId = Optional.ofNullable(json.getString("runId"))
-                .orElse(UUID.randomUUID().toString());
+        String runId = json.getString("runId");
 
         // messages
         List<BaseMessage> messages = convertJsonMessages(json.getJSONArray("messages"));
 
-        // actions -> tools（注意：CopilotKit 用 parameters 对象，不是 jsonSchema 字符串）
-        List<Tool> tools = convertJsonActions(json.getJSONArray("actions"));
-
         // state（可从 json.getJSONObject("state") 转）
         State state = new State();
-        if (json.getJSONObject("state") != null) {
-            state.getState().putAll(json.getJSONObject("state"));
-        }
+//        if (json.getJSONObject("state") != null) {
+//            state.getState().putAll(json.getJSONObject("state"));
+//        }
 
         // context（可把 properties/config 放进去）
         List<Context> context = new ArrayList<>();
@@ -206,7 +192,7 @@ public class AguiStreamController {
 
         Object forwardedProps = json.get("forwardedParameters");
 
-        return new RunAgentInput(threadId, runId, state, messages, tools, context, forwardedProps);
+        return new RunAgentInput(threadId, runId, state, messages, null, context, forwardedProps);
     }
 
     private List<BaseMessage> convertJsonMessages(com.alibaba.fastjson.JSONArray arr) {
@@ -312,47 +298,22 @@ public class AguiStreamController {
         return message;
     }
 
-    /**
-     * 工具注册：将 RunAgentInput.tools 转为 Spring AI 的 ToolCallback
-     * 若入参没有工具，默认注册 WeatherTool
-     */
-    private List<ToolCallback> convertToolsToToolCallbacks(List<Tool> tools) {
-        List<ToolCallback> callbacks = new ArrayList<>();
+    public static class Tools {
 
-        // 先注册你默认的工具
-        callbacks.addAll(Arrays.asList(ToolCallbacks.from(new WeatherTool())));
-
-        if (tools == null || tools.isEmpty()) {
-            return callbacks;
-        }
-
-        // 把 actions 映射成 FunctionToolCallback（简单实现：统一 String 入参）
-        for (Tool t : tools) {
-            FunctionToolCallback cb = FunctionToolCallback.builder(t.name(), (String input) -> {
-                        return "Tool " + t.name() + " executed with input: " + input;
-                    })
-                    .description(t.description())
-                    .inputType(String.class)
-                    .build();
-            callbacks.add(cb);
-        }
-        return callbacks;
-    }
-
-    // ========== Demo 工具 ==========
-    public static class WeatherTool {
-        @org.springframework.ai.tool.annotation.Tool(name = "weather_tool", description = "获取指定城市的天气信息")
-        public String getWeather(@ToolParam(description = "城市名称") String city,
-                                 @ToolParam(description = "当前时间戳") String currentTimestamp) {
-            return String.format("{\"city\":\"%s\",\"temperature\":-10,\"time\":\"%s\"}",
-                    city, currentTimestamp);
-        }
-
-        @org.springframework.ai.tool.annotation.Tool(description = "Send an email to someone")
-        public String sendEmail(@ToolParam(description = "destination address") String to,
-                                @ToolParam(description = "subject of the email") String subject,
-                                @ToolParam(description = "body of the email") String body) {
+        @org.springframework.ai.tool.annotation.Tool( description = "Send an email to someone")
+        public String sendEmail(
+                @ToolParam( description = "destination address") String to,
+                @ToolParam( description = "subject of the email") String subject,
+                @ToolParam( description = "body of the email") String body
+        ) {
+            // This is a placeholder for the actual implementation
             return format("mail sent to %s with subject %s", to, subject);
+        }
+
+        @org.springframework.ai.tool.annotation.Tool( description = "Get the weather in location")
+        public String queryWeather(@ToolParam( description = "The query to use in your search.") String query) {
+            // This is a placeholder for the actual implementation
+            return "Cold, with a low of 13 degrees";
         }
     }
 }
