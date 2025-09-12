@@ -1,6 +1,7 @@
 package com.alibaba.agui;
 
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.alibaba.cloud.ai.graph.event.agent.AgentOrchestrator;
 import com.alibaba.cloud.ai.graph.event.agent.RunAgentInput;
 import com.alibaba.cloud.ai.graph.event.context.Context;
 import com.alibaba.cloud.ai.graph.event.event.BaseEvent;
@@ -22,8 +23,6 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
@@ -90,13 +89,12 @@ public class AguiStreamController {
                 ReactAgent agent = ReactAgent.builder()
                         .name("agui_stream_agent")
                         .model(chatModel)
-                        .inputKey("llm_input_messages")
                         .tools(toolCallbacks)
                         .callManager(callbackManager)
                         .build();
 
                 Map<String, Object> graphInputs = new HashMap<>();
-                graphInputs.put("llm_input_messages", springMessages);
+                graphInputs.put("messages", springMessages);
                 graphInputs.put("threadId", input.threadId());
                 graphInputs.put("runId", input.runId());
                 graphInputs.put("tools", input.tools());
@@ -110,7 +108,6 @@ public class AguiStreamController {
             }
         }, input);
 
-        // 合并心跳与事件
         return runFlux;
     }
 
@@ -142,21 +139,6 @@ public class AguiStreamController {
         }
     }
 
-    /**
-     * 健康检查
-     */
-    @GetMapping(path = "/health", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, String>> health() {
-        Map<String, String> health = new HashMap<>();
-        health.put("status", "healthy");
-        health.put("service", "CopilotKit ServiceAdapter Controller");
-        health.put("mode", "service_adapter");
-        health.put("endpoint", "/copilotkit");
-        health.put("timestamp", new java.util.Date().toString());
-        return ResponseEntity.ok(health);
-    }
-
-    // ========== Helpers ==========
 
     private void setCorsHeaders(HttpServletResponse response) {
         response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
@@ -165,9 +147,6 @@ public class AguiStreamController {
         response.setHeader("Access-Control-Allow-Credentials", "true");
     }
 
-    /**
-     * CopilotKit -> AG-UI：创建适配的 RunAgentInput
-     */
     private RunAgentInput createAdaptedRunAgentInput(com.alibaba.fastjson.JSONObject json) {
         String threadId = json.getString("threadId");
         String runId = json.getString("runId");
@@ -175,11 +154,7 @@ public class AguiStreamController {
         // messages
         List<BaseMessage> messages = convertJsonMessages(json.getJSONArray("messages"));
 
-        // state（可从 json.getJSONObject("state") 转）
         State state = new State();
-//        if (json.getJSONObject("state") != null) {
-//            state.getState().putAll(json.getJSONObject("state"));
-//        }
 
         // context（可把 properties/config 放进去）
         List<Context> context = new ArrayList<>();
@@ -206,9 +181,6 @@ public class AguiStreamController {
         return messages;
     }
 
-    /**
-     * CopilotKit actions: { name, description, parameters: {type,properties,required} }
-     */
     private List<Tool> convertJsonActions(com.alibaba.fastjson.JSONArray actionsArray) {
         if (actionsArray == null || actionsArray.isEmpty()) return new ArrayList<>();
         List<Tool> tools = new ArrayList<>();
@@ -312,7 +284,6 @@ public class AguiStreamController {
 
         @org.springframework.ai.tool.annotation.Tool( description = "Get the weather in location")
         public String queryWeather(@ToolParam( description = "The query to use in your search.") String query) {
-            // This is a placeholder for the actual implementation
             return "Cold, with a low of 13 degrees";
         }
     }

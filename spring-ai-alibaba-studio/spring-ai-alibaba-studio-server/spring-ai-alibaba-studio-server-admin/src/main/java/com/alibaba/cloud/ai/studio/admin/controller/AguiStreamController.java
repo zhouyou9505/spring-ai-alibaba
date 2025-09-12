@@ -69,11 +69,7 @@ public class AguiStreamController {
         this.messageMapper = new MessageMapper();
     }
 
-    /**
-     * ServiceAdapter endpoint for CopilotKit - Single endpoint for all chat completion requests
-     * This replaces all MCP endpoints with a single ServiceAdapter-compatible endpoint
-     * Returns Flux<ServerSentEvent<BaseEvent>> following AG-UI pattern
-     */
+
     @PostMapping(path = "/copilotkit", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "CopilotKit ServiceAdapter Endpoint", description = "Main ServiceAdapter endpoint for CopilotKit integration")
     public Flux<ServerSentEvent<BaseEvent>> copilotKitServiceAdapter(@RequestBody String requestBody, HttpServletResponse response) throws Exception {

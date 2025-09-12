@@ -25,7 +25,6 @@ import com.alibaba.cloud.ai.graph.action.AsyncNodeAction;
 import com.alibaba.cloud.ai.graph.agent.BaseAgent;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.agent.flow.builder.FlowGraphBuilder;
-import com.alibaba.cloud.ai.graph.event.manager.CallbackManager;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 
 import static com.alibaba.cloud.ai.graph.action.AsyncNodeAction.node_async;

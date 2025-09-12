@@ -490,8 +490,7 @@ public class ReactAgent extends BaseAgent {
 			return new ReactAgent(llmNode, toolNode, this);
 		}
 
-
-    }
+	}
 
 	public static class SubGraphNodeAdapter implements NodeAction {
 
